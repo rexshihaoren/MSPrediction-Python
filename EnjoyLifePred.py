@@ -10,6 +10,7 @@ from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
 from scipy.stats import uniform,expon
 from matplotlib.mlab import rec_drop_fields
+import itertools
 
 def pred_prep(data_path, obj, target):
 	'''A generalized method that could return the desired X and y, based on the file path of the data, the name of the obj, and the target column we are trying to predict.'''
@@ -22,8 +23,6 @@ def pred_prep(data_path, obj, target):
 	X = newdataset.view((np.float64, len(newdataset.dtype.names)))
 	y = y.view((np.float64, 1))
 	return X, y, featureNames
-
-
 
 def run_clf(clf, X, y):
 	'''Run a single classifier, return Y_pred and Y_truefor producing plots'''
@@ -43,10 +42,10 @@ def clf_plot(clf, X, y, clfName):
 	# Produce data for plotting
 	Y_pred, Y_true = run_clf(clf, X, y)
 	# Plotting auc_roc and precision_recall
-	plot_auc_roc(Y_pred, Y_true, clfName)
-	# plot_pr(Y_pred, Y_true)
+	plot_roc(Y_pred, Y_true, clfName)
+	plot_pr(Y_pred, Y_true,clfName)
 
-def plot_auc_roc(y_pred, y_true, clfName):
+def plot_roc(y_pred, y_true, clfName):
 	'''Plots the ROC Curves'''
 	fig = pl.figure(figsize=(8,6),dpi=150)
 	mean_tpr = 0.0
@@ -76,15 +75,28 @@ def plot_auc_roc(y_pred, y_true, clfName):
 	pl.xlabel('False Positive Rate',size=30)
 	pl.ylabel('True Positive Rate',size=30)
 	pl.title('Receiver operating characteristic',size=25)
-	# fix_axes()
-	# fix_legend(loc="lower right")
 	pl.legend(loc="lower right")
 	pl.tight_layout()
 	fig.savefig('plots/'+clfName+'_roc_auc.pdf')
-	fig.show()
+	pl.show()
 
-
-
+def plot_pr(y_pred, y_true,clfName):
+	fig = pl.figure(figsize=(8,6),dpi=150)
+	yt = list(itertools.chain.from_iterable(y_true))
+	yp = list(itertools.chain.from_iterable(y_pred))
+	precision, recall, thresholds = precision_recall_curve(yt, yp)
+	area = auc(recall, precision)
+	print("Area Under Curve: %0.2f" % area)
+	pl.clf()
+	pl.plot(recall, precision, label='Precision-Recall curve')
+	pl.xlabel('Recall')
+	pl.ylabel('Precision')
+	pl.ylim([0.0, 1.05])
+	pl.xlim([0.0, 1.0])
+	pl.title('Precision-Recall: AUC=%0.2f' % area)
+	pl.legend(loc="lower left")
+	fig.savefig('plots/'+clfName+'_pr.pdf')
+	pl.show()
 
 if __name__ == "__main__":
 	'''Some basic setup for prediction'''
@@ -105,30 +117,3 @@ if __name__ == "__main__":
 	clfName = raw_input()
 	clf = classifiers[clfName]
 	clf_plot(clf, X, y, clfName)
-	# mean_tpr = 0.0
-	# mean_fpr = np.linspace(0, 1, 100)
-	# all_tpr = []
-	# fig = pl.figure(figsize = (8,6), dpi = 150)
-	# for i, (train, test) in enumerate(cv):
-	#     probas_ = clf.fit(X[train], y[train]).predict_proba(X[test])
-	#     # Compute ROC curve and area the curve
-	#     fpr, tpr, thresholds = roc_curve(y[test], probas_[:, 1])
-	#     mean_tpr += np.interp(mean_fpr, fpr, tpr)
-	#     mean_tpr[0] = 0.0
-	#     roc_auc = auc(fpr, tpr)
-	#     pl.plot(fpr, tpr, lw=1, label='ROC fold %d (area = %0.2f)' % (i, roc_auc))
-
-	# pl.plot([0, 1], [0, 1], '--', color=(0.6, 0.6, 0.6), label='Random')
-	# mean_tpr /= len(cv)
-	# mean_tpr[-1] = 1.0
-	# mean_auc = auc(mean_fpr, mean_tpr)
-	# pl.plot(mean_fpr, mean_tpr, 'k--',
-	#         label='Mean ROC (area = %0.2f)' % mean_auc, lw=2)
-	# pl.xlim([-0.05, 1.05])
-	# pl.ylim([-0.05, 1.05])
-	# pl.xlabel('False Positive Rate')
-	# pl.ylabel('True Positive Rate')
-	# pl.title('Receiver operating characteristic example')
-	# pl.legend(loc="lower right")
-	# fig.savefig("plots/"+clfName+"_roc_auc.pdf")
-	# fig.show()
