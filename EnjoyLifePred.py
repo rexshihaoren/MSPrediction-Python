@@ -8,7 +8,6 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
-from scipy.stats import uniform,expon
 from matplotlib.mlab import rec_drop_fields
 import itertools
 
@@ -16,6 +15,8 @@ def pred_prep(data_path, obj, target):
 	'''A generalized method that could return the desired X and y, based on the file path of the data, the name of the obj, and the target column we are trying to predict.'''
 	f=hp.File(data_path, 'r+')
 	dataset = f[obj].value
+	# Convert Everything to float for easier calculation
+	dataset = dataset.astype([(k,float) for k in dataset.dtype.names])
 	featureNames = dataset.dtype.fields.keys()
 	featureNames.remove(target)
 	y = dataset[target]
@@ -38,14 +39,14 @@ def run_clf(clf, X, y):
 		Y_true.append(y[test_index])
 	return Y_pred, Y_true
 
-def clf_plot(clf, X, y, clfName):
+def clf_plot(clf, X, y, clfName, obj):
 	# Produce data for plotting
 	Y_pred, Y_true = run_clf(clf, X, y)
 	# Plotting auc_roc and precision_recall
-	plot_roc(Y_pred, Y_true, clfName)
-	plot_pr(Y_pred, Y_true,clfName)
+	plot_roc(Y_pred, Y_true, clfName, obj)
+	plot_pr(Y_pred, Y_true, clfName, obj)
 
-def plot_roc(y_pred, y_true, clfName):
+def plot_roc(y_pred, y_true, clfName, obj):
 	'''Plots the ROC Curves'''
 	fig = pl.figure(figsize=(8,6),dpi=150)
 	mean_tpr = 0.0
@@ -68,34 +69,35 @@ def plot_roc(y_pred, y_true, clfName):
 	mean_tpr /= len(folds)
 	mean_tpr[-1] = 1.0
 	mean_auc = auc(mean_fpr,mean_tpr)
+	print("ROC AUC: %0.2f" % mean_auc)
 	pl.plot(mean_fpr, mean_tpr, 'k--',
 	             label='Mean ROC (area = %0.2f)' % mean_auc, lw=2)
-	pl.xlim([-0.05, 1.05])
-	pl.ylim([-0.05, 1.05])
+	pl.xlim([0.0, 1.00])
+	pl.ylim([0.0, 1.00])
 	pl.xlabel('False Positive Rate',size=30)
 	pl.ylabel('True Positive Rate',size=30)
 	pl.title('Receiver operating characteristic',size=25)
 	pl.legend(loc="lower right")
 	pl.tight_layout()
-	fig.savefig('plots/'+clfName+'_roc_auc.pdf')
+	fig.savefig('plots/'+obj+'/'+clfName+'_roc_auc.pdf')
 	pl.show()
 
-def plot_pr(y_pred, y_true,clfName):
+def plot_pr(y_pred, y_true,clfName, obj):
 	fig = pl.figure(figsize=(8,6),dpi=150)
 	yt = list(itertools.chain.from_iterable(y_true))
 	yp = list(itertools.chain.from_iterable(y_pred))
 	precision, recall, thresholds = precision_recall_curve(yt, yp)
 	area = auc(recall, precision)
-	print("Area Under Curve: %0.2f" % area)
+	print("Precision Recall AUC: %0.2f" % area)
 	pl.clf()
 	pl.plot(recall, precision, label='Precision-Recall curve')
 	pl.xlabel('Recall')
 	pl.ylabel('Precision')
-	pl.ylim([0.0, 1.05])
+	pl.ylim([0.0, 1.00])
 	pl.xlim([0.0, 1.0])
 	pl.title('Precision-Recall: AUC=%0.2f' % area)
 	pl.legend(loc="lower left")
-	fig.savefig('plots/'+clfName+'_pr.pdf')
+	fig.savefig('plots/'+obj+'/'+clfName+'_pr.pdf')
 	pl.show()
 
 if __name__ == "__main__":
@@ -104,16 +106,17 @@ if __name__ == "__main__":
 	data_path = '../MSPrediction-R/Data Scripts/data/predData.h5'
 	obj = 'modfam2'
 	target = 'EnjoyLife'
-	###################################################################
+	########## Can use raw_input instead as well#######################
 	X, y, featureNames = pred_prep(data_path, obj, target)
 	classifiers = {"LogisticRegression": LogisticRegression(), 
 					"KNN": KNeighborsClassifier(),
 					"Naive_Bayes": GaussianNB(),
-					"SVM": SVC(probability = True)
+					"SVM": SVC(probability = True),
+					"RandomForest": RandomForestClassifier()
 					}
 	print ("Which Classifer would you like to use?")
 	print ("Options:")
 	print (classifiers.keys())
 	clfName = raw_input()
 	clf = classifiers[clfName]
-	clf_plot(clf, X, y, clfName)
+	clf_plot(clf, X, y, clfName, obj)
