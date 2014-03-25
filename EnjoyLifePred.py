@@ -31,24 +31,35 @@ def compare_clf(X, y, clfs, obj):
 	cv = KFold(len(y), n_folds = 10, shuffle = True)
 	for clfName in clfs.keys():
 		clf = clfs[clfName]
-		Y_pred = []
-		Y_true = []
+		y_pred = []
+		y_true = []
 		for train_index, test_index in cv:
 			clf.fit(X[train_index], y[train_index])
 			if (clfName != "LinearRegression"):
 				proba = clf.predict_proba(X[test_index])
-				Y_pred.append(proba[:,1])
+				y_pred.append(proba[:,1])
 			else:
 				proba = clf.predict(X[test_index])
-				Y_pred.append(proba)
-			Y_true.append(y[test_index])
-		Y_true = list(itertools.chain.from_iterable(Y_true))
-		Y_pred = list(itertools.chain.from_iterable(Y_pred))
-		fpr, tpr, thresholds = roc_curve(Y_true, Y_pred)
-		roc_auc = auc(fpr, tpr)
-		print("Area under the ROC curve : %f" % roc_auc)
+				y_pred.append(proba)
+			y_true.append(y[test_index])
+		mean_tpr = 0.0
+		mean_fpr = np.linspace(0, 1, 100)
+		if len(y_pred)==1:
+		    folds = zip([y_pred],[y_true])
+		else:
+		    folds = zip(y_pred,y_true)
+		for i, (pred,true) in enumerate(folds):
+		    # pred & true represent each of the experiment folds
+			fpr, tpr, thresholds = roc_curve(true, pred)
+			mean_tpr += np.interp(mean_fpr, fpr, tpr)
+			mean_tpr[0] = 0.0
+			roc_auc = auc (fpr, tpr)
+		mean_tpr /= len(folds)
+		mean_tpr[-1] = 1.0
+		mean_auc = auc(mean_fpr,mean_tpr)
+		print("Area under the ROC curve : %f" % mean_auc)
 		# Plot ROC curve
-		pl.plot(fpr, tpr, lw=3, label = clfName + ' (area = %0.2f)' %roc_auc)
+		pl.plot(mean_fpr, mean_tpr, lw=3, label = clfName + ' (area = %0.2f)' %mean_auc)
 	pl.plot([0, 1], [0, 1], 'k--')
 	pl.xlim([0.0, 1.0])
 	pl.ylim([0.0, 1.0])
@@ -63,36 +74,36 @@ def compare_clf(X, y, clfs, obj):
 	pl.show()
 
 def run_clf(clf, X, y, clfName):
-	'''Run a single classifier, return Y_pred and Y_truefor producing plots'''
+	'''Run a single classifier, return y_pred and y_truefor producing plots'''
 	# initialize predicted y, real y
-	Y_true = []
-	Y_pred = []
+	y_true = []
+	y_pred = []
 	# Use 10-folds cross validation
 	cv = StratifiedKFold(y, n_folds = 10)
 	for train_index, test_index in cv:
 		clf.fit(X[train_index], y[train_index])
 		if (clfName != "LinearRegression"):
 			proba = clf.predict_proba(X[test_index])
-			Y_pred.append(proba[:,1])
+			y_pred.append(proba[:,1])
 		else:
 			proba = clf.predict(X[test_index])
-			Y_pred.append(proba)
-		Y_true.append(y[test_index])
-	return Y_pred, Y_true
+			y_pred.append(proba)
+		y_true.append(y[test_index])
+	return y_pred, y_true
 
 def clf_plot(clf, X, y, clfName, obj):
 	# Produce data for plotting
-	Y_pred, Y_true = run_clf(clf, X, y,clfName)
+	y_pred, y_true = run_clf(clf, X, y,clfName)
 	print "pred"
-	print len(Y_pred[1])
+	print len(y_pred[1])
 	print "true"
-	print len(Y_true[1])
+	print len(y_true[1])
 	# Plotting auc_roc and precision_recall
-	plot_roc(Y_pred, Y_true, clfName, obj)
-	plot_pr(Y_pred, Y_true, clfName, obj)
+	plot_roc(y_pred, y_true, clfName, obj)
+	plot_pr(y_pred, y_true, clfName, obj)
 
 def plot_roc(y_pred, y_true, clfName, obj):
-	'''Plots the ROC Curves'''
+	'''Plots the ROC Curve'''
 	fig = pl.figure(figsize=(8,6),dpi=150)
 	mean_tpr = 0.0
 	mean_fpr = np.linspace(0, 1, 100)
@@ -100,14 +111,9 @@ def plot_roc(y_pred, y_true, clfName, obj):
 	    folds = zip([y_pred],[y_true])
 	else:
 	    folds = zip(y_pred,y_true)
-	mean_roc_auc=0
-	total_yt =[]
-	total_yp = []
 	for i, (pred,true) in enumerate(folds):
 	    # pred & true represent each of the experiment folds
 		fpr, tpr, thresholds = roc_curve(true, pred)
-		print fpr
-		print true, pred
 		mean_tpr += np.interp(mean_fpr, fpr, tpr)
 		mean_tpr[0] = 0.0
 		roc_auc = auc (fpr, tpr)
@@ -130,14 +136,25 @@ def plot_roc(y_pred, y_true, clfName, obj):
 	pl.show()
 
 def plot_pr(y_pred, y_true,clfName, obj):
+	'''Plot the Precision-Recall Curve'''
 	fig = pl.figure(figsize=(8,6),dpi=150)
-	yt = list(itertools.chain.from_iterable(y_true))
-	yp = list(itertools.chain.from_iterable(y_pred))
-	precision, recall, thresholds = precision_recall_curve(yt, yp)
-	area = auc(recall, precision)
+	mean_prec = 0.0
+	mean_rec = np.linspace(0, 1, 100)
+	if len(y_pred)==1:
+	    folds = zip([y_pred],[y_true])
+	else:
+	    folds = zip(y_pred,y_true)
+	for i, (pred,true) in enumerate(folds):
+	    # pred & true represent each of the experiment folds
+		prec, rec, thresholds = precision_recall_curve(true, pred)
+		mean_prec += np.interp(mean_rec, rec, prec)
+		mean_prec[0] = 0.0
+	mean_prec /= len(folds)
+	mean_prec[-1] = 1.0
+	area = auc(rec, prec)
 	print("Precision Recall AUC: %0.2f" % area)
 	pl.clf()
-	pl.plot(recall, precision, label='Precision-Recall curve')
+	pl.plot(rec, prec, label='Precision-Recall curve')
 	pl.xlabel('Recall')
 	pl.ylabel('Precision')
 	pl.ylim([0.0, 1.00])
