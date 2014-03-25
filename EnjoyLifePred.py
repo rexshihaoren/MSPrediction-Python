@@ -1,10 +1,10 @@
 import pylab as pl
 import h5py as hp
 import numpy as np
-from sklearn.cross_validation import StratifiedShuffleSplit, ShuffleSplit, StratifiedKFold
+from sklearn.cross_validation import StratifiedShuffleSplit, ShuffleSplit, StratifiedKFold, KFold
 from sklearn.metrics import roc_curve, auc, average_precision_score, precision_recall_curve
 from sklearn.naive_bayes import BernoulliNB, GaussianNB
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
@@ -25,7 +25,44 @@ def pred_prep(data_path, obj, target):
 	y = y.view((np.float64, 1))
 	return X, y, featureNames
 
-def run_clf(clf, X, y):
+def compare_clf(X, y, clfs, obj):
+	'''Compare classifiers with mean roc_auc'''
+	fig = pl.figure(figsize=(8,6),dpi=150)
+	cv = KFold(len(y), n_folds = 10, shuffle = True)
+	for clfName in clfs.keys():
+		clf = clfs[clfName]
+		Y_pred = []
+		Y_true = []
+		for train_index, test_index in cv:
+			clf.fit(X[train_index], y[train_index])
+			if (clfName != "LinearRegression"):
+				proba = clf.predict_proba(X[test_index])
+				Y_pred.append(proba[:,1])
+			else:
+				proba = clf.predict(X[test_index])
+				Y_pred.append(proba)
+			Y_true.append(y[test_index])
+		Y_true = list(itertools.chain.from_iterable(Y_true))
+		Y_pred = list(itertools.chain.from_iterable(Y_pred))
+		fpr, tpr, thresholds = roc_curve(Y_true, Y_pred)
+		roc_auc = auc(fpr, tpr)
+		print("Area under the ROC curve : %f" % roc_auc)
+		# Plot ROC curve
+		pl.plot(fpr, tpr, lw=3, label = clfName + ' (area = %0.2f)' %roc_auc)
+	pl.plot([0, 1], [0, 1], 'k--')
+	pl.xlim([0.0, 1.0])
+	pl.ylim([0.0, 1.0])
+	pl.xlabel('False Positive Rate',fontsize=30)
+	pl.ylabel('True Positive Rate',fontsize=30)
+	pl.title('Receiver operating characteristic',fontsize=25)
+	# fix_axes()
+	# fix_legend(loc="lower right")
+	pl.legend(loc='lower right')
+	pl.tight_layout()
+	fig.savefig('plots/'+obj+'/'+'clf_comparison.pdf')
+	pl.show()
+
+def run_clf(clf, X, y, clfName):
 	'''Run a single classifier, return Y_pred and Y_truefor producing plots'''
 	# initialize predicted y, real y
 	Y_true = []
@@ -34,14 +71,22 @@ def run_clf(clf, X, y):
 	cv = StratifiedKFold(y, n_folds = 10)
 	for train_index, test_index in cv:
 		clf.fit(X[train_index], y[train_index])
-		proba = clf.predict_proba(X[test_index])
-		Y_pred.append(proba[:,1])
+		if (clfName != "LinearRegression"):
+			proba = clf.predict_proba(X[test_index])
+			Y_pred.append(proba[:,1])
+		else:
+			proba = clf.predict(X[test_index])
+			Y_pred.append(proba)
 		Y_true.append(y[test_index])
 	return Y_pred, Y_true
 
 def clf_plot(clf, X, y, clfName, obj):
 	# Produce data for plotting
-	Y_pred, Y_true = run_clf(clf, X, y)
+	Y_pred, Y_true = run_clf(clf, X, y,clfName)
+	print "pred"
+	print len(Y_pred[1])
+	print "true"
+	print len(Y_true[1])
 	# Plotting auc_roc and precision_recall
 	plot_roc(Y_pred, Y_true, clfName, obj)
 	plot_pr(Y_pred, Y_true, clfName, obj)
@@ -61,6 +106,8 @@ def plot_roc(y_pred, y_true, clfName, obj):
 	for i, (pred,true) in enumerate(folds):
 	    # pred & true represent each of the experiment folds
 		fpr, tpr, thresholds = roc_curve(true, pred)
+		print fpr
+		print true, pred
 		mean_tpr += np.interp(mean_fpr, fpr, tpr)
 		mean_tpr[0] = 0.0
 		roc_auc = auc (fpr, tpr)
@@ -112,11 +159,17 @@ if __name__ == "__main__":
 					"KNN": KNeighborsClassifier(),
 					"Naive_Bayes": GaussianNB(),
 					"SVM": SVC(probability = True),
-					"RandomForest": RandomForestClassifier()
+					"RandomForest": RandomForestClassifier(),
+					"LinearRegression": LinearRegression()
 					}
-	print ("Which Classifer would you like to use?")
-	print ("Options:")
-	print (classifiers.keys())
-	clfName = raw_input()
-	clf = classifiers[clfName]
-	clf_plot(clf, X, y, clfName, obj)
+	print ("Compare classifiers? (Y/N)")
+	com_clf = raw_input()
+	if com_clf == "Y":
+		compare_clf(X, y, classifiers, obj)
+	else:
+		print ("Which Classifer would you like to use?")
+		print ("Options:")
+		print (classifiers.keys())
+		clfName = raw_input()
+		clf = classifiers[clfName]
+		clf_plot(clf, X, y, clfName, obj)
