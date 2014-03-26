@@ -239,7 +239,7 @@ if __name__ == "__main__":
 	clfName = "KNN"
 	clf = classifiers[clfName]
 	param = 'n_neighbors'
-	param_dist = range(40,141)
+	param_dist = range(1,151)
 	metric = 'roc'
 	param_sweeping(clf, obj, X, y, param_dist, metric, param, clfName)
 	# print ("Compare classifiers? (Y/N)")
