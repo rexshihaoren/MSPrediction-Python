@@ -11,6 +11,7 @@ from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
 from matplotlib.mlab import rec_drop_fields
 import itertools
+from inspect import getargspec
 
 def pred_prep(data_path, obj, target):
 	'''A generalized method that could return the desired X and y, based on the file path of the data, the name of the obj, and the target column we are trying to predict.'''
@@ -29,20 +30,11 @@ def pred_prep(data_path, obj, target):
 def compare_clf(X, y, clfs, obj):
 	'''Compare classifiers with mean roc_auc'''
 	fig = pl.figure(figsize=(8,6),dpi=150)
-	cv = KFold(len(y), n_folds = 10, shuffle = True)
+	# cv = KFold(len(y), n_folds = 10, shuffle = True)
+	# cv = StratifiedKFold(y, n_folds = 10)
 	for clfName in clfs.keys():
 		clf = clfs[clfName]
-		y_pred = []
-		y_true = []
-		for train_index, test_index in cv:
-			clf.fit(X[train_index], y[train_index])
-			if (clfName != "LinearRegression"):
-				proba = clf.predict_proba(X[test_index])
-				y_pred.append(proba[:,1])
-			else:
-				proba = clf.predict(X[test_index])
-				y_pred.append(proba)
-			y_true.append(y[test_index])
+		y_pred, y_true = run_clf(clf, X, y, clfName)
 		mean_tpr = 0.0
 		mean_fpr = np.linspace(0, 1, 100)
 		if len(y_pred)==1:
@@ -67,8 +59,6 @@ def compare_clf(X, y, clfs, obj):
 	pl.xlabel('False Positive Rate',fontsize=30)
 	pl.ylabel('True Positive Rate',fontsize=30)
 	pl.title('Receiver operating characteristic',fontsize=25)
-	# fix_axes()
-	# fix_legend(loc="lower right")
 	pl.legend(loc='lower right')
 	pl.tight_layout()
 	fig.savefig('plots/'+obj+'/'+'clf_comparison.pdf')
@@ -173,23 +163,12 @@ def param_sweeping(clf, obj, X, y, param_dist, metric, param, clfName):
 	metric - - the metric we use to evaluate the performance of the classifiers
 	obj - - the name of the dataset we are using'''
 	scores = []
-	# x_axis = np.linspace(0, 1, 100)
-	# x_train, x_test, y_train, y_test = train_test_split(X, y, test_size = 0.20, random_state = 0)
 	for i in param_dist:
 		y_true = []
 		y_pred = []
-		# Use Stratified 10-folds cross validation
-		cv = StratifiedKFold(y, n_folds = 10)
-		newclf = clf(n_neighbors = i)
-		for train_index, test_index in cv:
-			newclf.fit(X[train_index], y[train_index])
-			if (clfName != "LinearRegression"):
-				proba = newclf.predict_proba(X[test_index])
-				y_pred.append(proba[:,1])
-			else:
-				proba = newclf.predict(X[test_index])
-				y_pred.append(proba)
-			y_true.append(y[test_index])
+		# new classifer each iteration
+		newclf = eval("clf.set_params("+ param + "= i)")
+		y_pred, y_true = run_clf(newclf, X, y, clfName)
 		mean_tpr = 0.0
 		mean_fpr = np.linspace(0, 1, 100)
 		if len(y_pred)==1:
@@ -208,17 +187,30 @@ def param_sweeping(clf, obj, X, y, param_dist, metric, param, clfName):
 		scores.append(mean_auc)
 		print("Area under the ROC curve : %f" % mean_auc)
 	fig = pl.figure(figsize=(8,6),dpi=150)
-	# scores = scores.flatten()
 	pl.plot(param_dist, scores, label = 'Parameter Sweeping Curve')
-	# pl.plot([0, 1], [0, 1], 'k--')
-	# pl.xlim([0.0, 1.0])
-	# pl.ylim([0.0, 1.0])
 	pl.xlabel('Parameter Distribution',fontsize=30)
 	pl.ylabel('AUC_ROC Score',fontsize=30)
 	pl.title('Parameter Sweeping Curve',fontsize=25)
 	pl.legend(loc='lower right')
 	fig.savefig('plots/'+obj+'/'+ clfName +'_' + param +'_'+'ps.pdf')
 	pl.show()
+
+def param_sweep_select(clf):
+	'''Asking user the specifics about parameter sweeping'''
+	arglist = getargspec(clf.__init__).args
+	arglist.remove('self')
+	param = raw_input("What parameters would you choose?\n" + str(arglist)+": ")
+	s = raw_input("Define the range of parameter you would like to sweep?\n")
+	param_dist = eval(s)
+	metric = raw_input("What metric would you like to use to evaluate the classifier?\n")
+	return param, param_dist, metric
+
+def choose_clf(classifiers):
+	print ("Which Classifer would you like to use?")
+	print ("Options:")
+	clfName = raw_input(str(classifiers.keys())+"\n")
+	clf = classifiers[clfName]
+	return clf, clfName
 
 
 if __name__ == "__main__":
@@ -230,26 +222,24 @@ if __name__ == "__main__":
 	########## Can use raw_input instead as well#######################
 	X, y, featureNames = pred_prep(data_path, obj, target)
 	classifiers = {"LogisticRegression": LogisticRegression(), 
-					"KNN": KNeighborsClassifier,
+					"KNN": KNeighborsClassifier(),
 					"Naive_Bayes": GaussianNB(),
 					"SVM": SVC(probability = True),
 					"RandomForest": RandomForestClassifier(),
 					"LinearRegression": LinearRegression()
 					}
-	clfName = "KNN"
-	clf = classifiers[clfName]
-	param = 'n_neighbors'
-	param_dist = range(1,151)
-	metric = 'roc'
-	param_sweeping(clf, obj, X, y, param_dist, metric, param, clfName)
-	# print ("Compare classifiers? (Y/N)")
-	# com_clf = raw_input()
-	# if com_clf == "Y":
-	# 	compare_clf(X, y, classifiers, obj)
-	# else:
-	# 	print ("Which Classifer would you like to use?")
-	# 	print ("Options:")
-	# 	print (classifiers.keys())
-	# 	clfName = raw_input()
-	# 	clf = classifiers[clfName]
-	# 	clf_plot(clf, X, y, clfName, obj)
+	com_clf = raw_input("Compare classifiers? (Y/N) ")
+	if com_clf == "Y":
+		compare_clf(X, y, classifiers, obj)
+	else:
+		clf, clfName = choose_clf(classifiers)
+		param_sweep = raw_input("Parameter Sweeping? (Y/N) ")
+		if param_sweep == "Y":
+			param, param_dist, metric = param_sweep_select(clf)
+			param_sweeping(clf, obj, X, y, param_dist, metric, param, clfName)
+		else:
+			print ("Your only choice now is to plot ROC and PR curves for "+clfName+" classifier")
+			clf_plot(clf, X, y, clfName, obj)
+
+
+
