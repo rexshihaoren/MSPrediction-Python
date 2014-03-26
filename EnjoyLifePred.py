@@ -92,22 +92,6 @@ def clf_plot(clf, X, y, clfName, obj):
 def plot_roc(y_pred, y_true, clfName, obj):
 	'''Plots the ROC Curve'''
 	fig = pl.figure(figsize=(8,6),dpi=150)
-	# mean_tpr = 0.0
-	# mean_fpr = np.linspace(0, 1, 100)
-	# if len(y_pred)==1:
-	#     folds = zip([y_pred],[y_true])
-	# else:
-	#     folds = zip(y_pred,y_true)
-	# for i, (pred,true) in enumerate(folds):
-	#     # pred & true represent each of the experiment folds
-	# 	fpr, tpr, thresholds = roc_curve(true, pred)
-	# 	mean_tpr += np.interp(mean_fpr, fpr, tpr)
-	# 	mean_tpr[0] = 0.0
-	# 	roc_auc = auc (fpr, tpr)
-	# 	pl.plot(fpr, tpr, lw=1, label='ROC fold %d (area = %0.2f)' % (i, roc_auc))
-	# mean_tpr /= len(folds)
-	# mean_tpr[-1] = 1.0
-	# mean_auc = auc(mean_fpr,mean_tpr)
 	mean_fpr, mean_tpr, mean_auc = plot_unit_prep(y_pred, y_true, 'roc')
 	mean_tpr[-1] = 1.0
 	pl.plot([0, 1], [0, 1], '--', color=(0.7, 0.7, 0.7),lw=3,label='Random')
@@ -127,22 +111,6 @@ def plot_roc(y_pred, y_true, clfName, obj):
 def plot_pr(y_pred, y_true,clfName, obj):
 	'''Plot the Precision-Recall Curve'''
 	fig = pl.figure(figsize=(8,6),dpi=150)
-	# mean_prec = 0.0
-	# mean_rec = np.linspace(0, 1, 60)
-	# if len(y_pred)==1:
-	#     folds = zip([y_pred],[y_true])
-	# else:
-	#     folds = zip(y_pred,y_true)
-	# for i, (pred,true) in enumerate(folds):
-	#     # pred & true represent each of the experiment folds
-	# 	prec, rec, thresholds = precision_recall_curve(true, pred)
-	# 	mean_prec += np.interp(mean_rec, rec, prec)
-	# 	mean_prec[0] = 0.0
-	# 	print mean_prec
-	# 	area = auc(rec, prec)
-	# 	print("Precision Recall AUC: %0.2f" % area)
-	# mean_prec /= len(folds)
-	# area = auc(rec, prec)
 	mean_rec, mean_prec, mean_area = plot_unit_prep(y_pred, y_true, 'pr')
 	print("Precision Recall AUC: %0.2f" % mean_area)
 	pl.clf()
@@ -156,7 +124,7 @@ def plot_pr(y_pred, y_true,clfName, obj):
 	fig.savefig('plots/'+obj+'/'+clfName+'_pr.pdf')
 	pl.show()
 
-def plot_unit_prep(y_pred, y_true, metric):
+def plot_unit_prep(y_pred, y_true, metric, sweeping = False):
 	''' Prepare mean_x, mean_y array for classifier evaludation, from predicted y and real y.
 	Keyword arguments:
 	y_pred - - predicted y array
@@ -173,17 +141,20 @@ def plot_unit_prep(y_pred, y_true, metric):
 			if metric == 'roc':
 				x, y, thresholds = roc_curve(true, pred)
 				roc_auc = auc(x, y)
-				pl.plot(x, y, lw=1, label='ROC fold %d (area = %0.2f)' % (i, roc_auc))
+				if not sweeping:
+					pl.plot(x, y, lw=1, label='ROC fold %d (area = %0.2f)' % (i, roc_auc))
+				mean_y += np.interp(mean_x, x, y)
 			else:
-				#precision-recall 'pr'
-				x, y, thresholds = precision_recall_curve(true, pred)
+				#precision-recall 'pr', y is prec, x is rec. rec is a decreasing array
+				y, x, thresholds = precision_recall_curve(true, pred)
+				# numpy.interp(x, xp, fp, left=None, right=None) 
+				# xp must be increasing, so reverse x array, which means the corresponding y has to reverse order as well.
+				mean_y += np.interp(mean_x, x[::-1], y[::-1])
 		except ValueError:
 			print metric +" is currently not available"
-		mean_y += np.interp(mean_x, x, y)
-		mean_y[0] = 0.0
+		# mean_y[0] = 0.0
 	mean_y/= len(folds)
 	mean_area = auc(mean_x,mean_y)
-	print mean_x, mean_y
 	return mean_x, mean_y, mean_area
 
 def param_sweeping(clf, obj, X, y, param_dist, metric, param, clfName):
@@ -204,21 +175,7 @@ def param_sweeping(clf, obj, X, y, param_dist, metric, param, clfName):
 		# new classifer each iteration
 		newclf = eval("clf.set_params("+ param + "= i)")
 		y_pred, y_true = run_clf(newclf, X, y, clfName)
-		mean_tpr = 0.0
-		mean_fpr = np.linspace(0, 1, 100)
-		if len(y_pred)==1:
-		    folds = zip([y_pred],[y_true])
-		else:
-		    folds = zip(y_pred,y_true)
-		for i, (pred,true) in enumerate(folds):
-		    # pred & true represent each of the experiment folds
-			fpr, tpr, thresholds = roc_curve(true, pred)
-			mean_tpr += np.interp(mean_fpr, fpr, tpr)
-			mean_tpr[0] = 0.0
-			roc_auc = auc(fpr, tpr)
-		mean_tpr /= len(folds)
-		mean_tpr[-1] = 1.0
-		mean_auc = auc(mean_fpr,mean_tpr)
+		mean_fpr, mean_tpr, mean_auc = plot_unit_prep(y_pred, y_true, metric, sweeping = True)
 		scores.append(mean_auc)
 		print("Area under the ROC curve : %f" % mean_auc)
 	fig = pl.figure(figsize=(8,6),dpi=150)
