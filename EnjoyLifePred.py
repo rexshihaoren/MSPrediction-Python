@@ -2,6 +2,7 @@ import pylab as pl
 import h5py as hp
 import numpy as np
 from sklearn.cross_validation import StratifiedShuffleSplit, ShuffleSplit, StratifiedKFold, KFold
+from sklearn import metrics
 from sklearn.metrics import roc_curve, auc, average_precision_score, precision_recall_curve
 from sklearn.naive_bayes import BernoulliNB, GaussianNB
 from sklearn.linear_model import LogisticRegression, LinearRegression
@@ -93,11 +94,7 @@ def run_clf(clf, X, y, clfName):
 
 def clf_plot(clf, X, y, clfName, obj):
 	# Produce data for plotting
-	y_pred, y_true = run_clf(clf, X, y,clfName)
-	print "pred"
-	print len(y_pred[1])
-	print "true"
-	print len(y_true[1])
+	y_pred, y_true = run_clf(clf,X, y,clfName)
 	# Plotting auc_roc and precision_recall
 	plot_roc(y_pred, y_true, clfName, obj)
 	plot_pr(y_pred, y_true, clfName, obj)
@@ -164,6 +161,66 @@ def plot_pr(y_pred, y_true,clfName, obj):
 	fig.savefig('plots/'+obj+'/'+clfName+'_pr.pdf')
 	pl.show()
 
+def param_sweeping(clf, obj, X, y, param_dist, metric, param, clfName):
+	'''Plot a parameter sweeping (ps) curve with the param_dist as a axis, and the scoring based on metric as y axis.
+	Keyword arguments:
+	clf - - classifier
+	X - - feature matrix
+	y - - target array
+	param - - a parameter of the classifier
+	param_dist - - the parameter distribution of param
+	clfName - - the name of the classifier
+	metric - - the metric we use to evaluate the performance of the classifiers
+	obj - - the name of the dataset we are using'''
+	scores = []
+	# x_axis = np.linspace(0, 1, 100)
+	# x_train, x_test, y_train, y_test = train_test_split(X, y, test_size = 0.20, random_state = 0)
+	for i in param_dist:
+		y_true = []
+		y_pred = []
+		# Use Stratified 10-folds cross validation
+		cv = StratifiedKFold(y, n_folds = 10)
+		newclf = clf(n_neighbors = i)
+		for train_index, test_index in cv:
+			newclf.fit(X[train_index], y[train_index])
+			if (clfName != "LinearRegression"):
+				proba = newclf.predict_proba(X[test_index])
+				y_pred.append(proba[:,1])
+			else:
+				proba = newclf.predict(X[test_index])
+				y_pred.append(proba)
+			y_true.append(y[test_index])
+		mean_tpr = 0.0
+		mean_fpr = np.linspace(0, 1, 100)
+		if len(y_pred)==1:
+		    folds = zip([y_pred],[y_true])
+		else:
+		    folds = zip(y_pred,y_true)
+		for i, (pred,true) in enumerate(folds):
+		    # pred & true represent each of the experiment folds
+			fpr, tpr, thresholds = roc_curve(true, pred)
+			mean_tpr += np.interp(mean_fpr, fpr, tpr)
+			mean_tpr[0] = 0.0
+			roc_auc = auc(fpr, tpr)
+		mean_tpr /= len(folds)
+		mean_tpr[-1] = 1.0
+		mean_auc = auc(mean_fpr,mean_tpr)
+		scores.append(mean_auc)
+		print("Area under the ROC curve : %f" % mean_auc)
+	fig = pl.figure(figsize=(8,6),dpi=150)
+	# scores = scores.flatten()
+	pl.plot(param_dist, scores, label = 'Parameter Sweeping Curve')
+	# pl.plot([0, 1], [0, 1], 'k--')
+	# pl.xlim([0.0, 1.0])
+	# pl.ylim([0.0, 1.0])
+	pl.xlabel('Parameter Distribution',fontsize=30)
+	pl.ylabel('AUC_ROC Score',fontsize=30)
+	pl.title('Parameter Sweeping Curve',fontsize=25)
+	pl.legend(loc='lower right')
+	fig.savefig('plots/'+obj+'/'+ clfName +'_' + param +'_'+'ps.pdf')
+	pl.show()
+
+
 if __name__ == "__main__":
 	'''Some basic setup for prediction'''
 	####### This part can be modified to fulfill different needs ######
@@ -173,20 +230,26 @@ if __name__ == "__main__":
 	########## Can use raw_input instead as well#######################
 	X, y, featureNames = pred_prep(data_path, obj, target)
 	classifiers = {"LogisticRegression": LogisticRegression(), 
-					"KNN": KNeighborsClassifier(),
+					"KNN": KNeighborsClassifier,
 					"Naive_Bayes": GaussianNB(),
 					"SVM": SVC(probability = True),
 					"RandomForest": RandomForestClassifier(),
 					"LinearRegression": LinearRegression()
 					}
-	print ("Compare classifiers? (Y/N)")
-	com_clf = raw_input()
-	if com_clf == "Y":
-		compare_clf(X, y, classifiers, obj)
-	else:
-		print ("Which Classifer would you like to use?")
-		print ("Options:")
-		print (classifiers.keys())
-		clfName = raw_input()
-		clf = classifiers[clfName]
-		clf_plot(clf, X, y, clfName, obj)
+	clfName = "KNN"
+	clf = classifiers[clfName]
+	param = 'n_neighbors'
+	param_dist = range(40,141)
+	metric = 'roc'
+	param_sweeping(clf, obj, X, y, param_dist, metric, param, clfName)
+	# print ("Compare classifiers? (Y/N)")
+	# com_clf = raw_input()
+	# if com_clf == "Y":
+	# 	compare_clf(X, y, classifiers, obj)
+	# else:
+	# 	print ("Which Classifer would you like to use?")
+	# 	print ("Options:")
+	# 	print (classifiers.keys())
+	# 	clfName = raw_input()
+	# 	clf = classifiers[clfName]
+	# 	clf_plot(clf, X, y, clfName, obj)
