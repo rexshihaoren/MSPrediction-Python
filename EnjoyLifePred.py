@@ -92,23 +92,25 @@ def clf_plot(clf, X, y, clfName, obj):
 def plot_roc(y_pred, y_true, clfName, obj):
 	'''Plots the ROC Curve'''
 	fig = pl.figure(figsize=(8,6),dpi=150)
-	mean_tpr = 0.0
-	mean_fpr = np.linspace(0, 1, 100)
-	if len(y_pred)==1:
-	    folds = zip([y_pred],[y_true])
-	else:
-	    folds = zip(y_pred,y_true)
-	for i, (pred,true) in enumerate(folds):
-	    # pred & true represent each of the experiment folds
-		fpr, tpr, thresholds = roc_curve(true, pred)
-		mean_tpr += np.interp(mean_fpr, fpr, tpr)
-		mean_tpr[0] = 0.0
-		roc_auc = auc (fpr, tpr)
-		pl.plot(fpr, tpr, lw=1, label='ROC fold %d (area = %0.2f)' % (i, roc_auc))
-	pl.plot([0, 1], [0, 1], '--', color=(0.7, 0.7, 0.7),lw=3,label='Random')
-	mean_tpr /= len(folds)
+	# mean_tpr = 0.0
+	# mean_fpr = np.linspace(0, 1, 100)
+	# if len(y_pred)==1:
+	#     folds = zip([y_pred],[y_true])
+	# else:
+	#     folds = zip(y_pred,y_true)
+	# for i, (pred,true) in enumerate(folds):
+	#     # pred & true represent each of the experiment folds
+	# 	fpr, tpr, thresholds = roc_curve(true, pred)
+	# 	mean_tpr += np.interp(mean_fpr, fpr, tpr)
+	# 	mean_tpr[0] = 0.0
+	# 	roc_auc = auc (fpr, tpr)
+	# 	pl.plot(fpr, tpr, lw=1, label='ROC fold %d (area = %0.2f)' % (i, roc_auc))
+	# mean_tpr /= len(folds)
+	# mean_tpr[-1] = 1.0
+	# mean_auc = auc(mean_fpr,mean_tpr)
+	mean_fpr, mean_tpr, mean_auc = plot_unit_prep(y_pred, y_true, 'roc')
 	mean_tpr[-1] = 1.0
-	mean_auc = auc(mean_fpr,mean_tpr)
+	pl.plot([0, 1], [0, 1], '--', color=(0.7, 0.7, 0.7),lw=3,label='Random')
 	print("ROC AUC: %0.2f" % mean_auc)
 	pl.plot(mean_fpr, mean_tpr, 'k--',
 	             label='Mean ROC (area = %0.2f)' % mean_auc, lw=2)
@@ -125,31 +127,64 @@ def plot_roc(y_pred, y_true, clfName, obj):
 def plot_pr(y_pred, y_true,clfName, obj):
 	'''Plot the Precision-Recall Curve'''
 	fig = pl.figure(figsize=(8,6),dpi=150)
-	mean_prec = 0.0
-	mean_rec = np.linspace(0, 1, 100)
+	# mean_prec = 0.0
+	# mean_rec = np.linspace(0, 1, 60)
+	# if len(y_pred)==1:
+	#     folds = zip([y_pred],[y_true])
+	# else:
+	#     folds = zip(y_pred,y_true)
+	# for i, (pred,true) in enumerate(folds):
+	#     # pred & true represent each of the experiment folds
+	# 	prec, rec, thresholds = precision_recall_curve(true, pred)
+	# 	mean_prec += np.interp(mean_rec, rec, prec)
+	# 	mean_prec[0] = 0.0
+	# 	print mean_prec
+	# 	area = auc(rec, prec)
+	# 	print("Precision Recall AUC: %0.2f" % area)
+	# mean_prec /= len(folds)
+	# area = auc(rec, prec)
+	mean_rec, mean_prec, mean_area = plot_unit_prep(y_pred, y_true, 'pr')
+	print("Precision Recall AUC: %0.2f" % mean_area)
+	pl.clf()
+	pl.plot(mean_rec, mean_prec, label='Precision-Recall curve')
+	pl.xlabel('Recall')
+	pl.ylabel('Precision')
+	pl.ylim([0.0, 1.05])
+	pl.xlim([0.0, 1.0])
+	pl.title('Precision-Recall: AUC=%0.2f' % mean_area)
+	pl.legend(loc="lower left")
+	fig.savefig('plots/'+obj+'/'+clfName+'_pr.pdf')
+	pl.show()
+
+def plot_unit_prep(y_pred, y_true, metric):
+	''' Prepare mean_x, mean_y array for classifier evaludation, from predicted y and real y.
+	Keyword arguments:
+	y_pred - - predicted y array
+	y_true - - true y target array'''
+	mean_y= 0.0
+	mean_x = np.linspace(0, 1, 100)
 	if len(y_pred)==1:
 	    folds = zip([y_pred],[y_true])
 	else:
 	    folds = zip(y_pred,y_true)
 	for i, (pred,true) in enumerate(folds):
-	    # pred & true represent each of the experiment folds
-		prec, rec, thresholds = precision_recall_curve(true, pred)
-		mean_prec += np.interp(mean_rec, rec, prec)
-		mean_prec[0] = 0.0
-	mean_prec /= len(folds)
-	mean_prec[-1] = 1.0
-	area = auc(rec, prec)
-	print("Precision Recall AUC: %0.2f" % area)
-	pl.clf()
-	pl.plot(rec, prec, label='Precision-Recall curve')
-	pl.xlabel('Recall')
-	pl.ylabel('Precision')
-	pl.ylim([0.0, 1.00])
-	pl.xlim([0.0, 1.0])
-	pl.title('Precision-Recall: AUC=%0.2f' % area)
-	pl.legend(loc="lower left")
-	fig.savefig('plots/'+obj+'/'+clfName+'_pr.pdf')
-	pl.show()
+		# pred & true represent each of the experiment folds
+		try:
+			if metric == 'roc':
+				x, y, thresholds = roc_curve(true, pred)
+				roc_auc = auc(x, y)
+				pl.plot(x, y, lw=1, label='ROC fold %d (area = %0.2f)' % (i, roc_auc))
+			else:
+				#precision-recall 'pr'
+				x, y, thresholds = precision_recall_curve(true, pred)
+		except ValueError:
+			print metric +" is currently not available"
+		mean_y += np.interp(mean_x, x, y)
+		mean_y[0] = 0.0
+	mean_y/= len(folds)
+	mean_area = auc(mean_x,mean_y)
+	print mean_x, mean_y
+	return mean_x, mean_y, mean_area
 
 def param_sweeping(clf, obj, X, y, param_dist, metric, param, clfName):
 	'''Plot a parameter sweeping (ps) curve with the param_dist as a axis, and the scoring based on metric as y axis.
