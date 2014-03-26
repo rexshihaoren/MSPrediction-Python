@@ -27,7 +27,7 @@ def pred_prep(data_path, obj, target):
 	y = y.view((np.float64, 1))
 	return X, y, featureNames
 
-def compare_clf(X, y, clfs, obj):
+def compare_clf(X, y, clfs, obj, metric = 'roc'):
 	'''Compare classifiers with mean roc_auc'''
 	fig = pl.figure(figsize=(8,6),dpi=150)
 	# cv = KFold(len(y), n_folds = 10, shuffle = True)
@@ -35,21 +35,7 @@ def compare_clf(X, y, clfs, obj):
 	for clfName in clfs.keys():
 		clf = clfs[clfName]
 		y_pred, y_true = run_clf(clf, X, y, clfName)
-		mean_tpr = 0.0
-		mean_fpr = np.linspace(0, 1, 100)
-		if len(y_pred)==1:
-		    folds = zip([y_pred],[y_true])
-		else:
-		    folds = zip(y_pred,y_true)
-		for i, (pred,true) in enumerate(folds):
-		    # pred & true represent each of the experiment folds
-			fpr, tpr, thresholds = roc_curve(true, pred)
-			mean_tpr += np.interp(mean_fpr, fpr, tpr)
-			mean_tpr[0] = 0.0
-			roc_auc = auc (fpr, tpr)
-		mean_tpr /= len(folds)
-		mean_tpr[-1] = 1.0
-		mean_auc = auc(mean_fpr,mean_tpr)
+		mean_fpr, mean_tpr, mean_auc = plot_unit_prep(y_pred, y_true, metric)
 		print("Area under the ROC curve : %f" % mean_auc)
 		# Plot ROC curve
 		pl.plot(mean_fpr, mean_tpr, lw=3, label = clfName + ' (area = %0.2f)' %mean_auc)
@@ -92,7 +78,7 @@ def clf_plot(clf, X, y, clfName, obj):
 def plot_roc(y_pred, y_true, clfName, obj):
 	'''Plots the ROC Curve'''
 	fig = pl.figure(figsize=(8,6),dpi=150)
-	mean_fpr, mean_tpr, mean_auc = plot_unit_prep(y_pred, y_true, 'roc')
+	mean_fpr, mean_tpr, mean_auc = plot_unit_prep(y_pred, y_true, 'roc', plotfold = True)
 	mean_tpr[-1] = 1.0
 	pl.plot([0, 1], [0, 1], '--', color=(0.7, 0.7, 0.7),lw=3,label='Random')
 	print("ROC AUC: %0.2f" % mean_auc)
@@ -124,11 +110,13 @@ def plot_pr(y_pred, y_true,clfName, obj):
 	fig.savefig('plots/'+obj+'/'+clfName+'_pr.pdf')
 	pl.show()
 
-def plot_unit_prep(y_pred, y_true, metric, sweeping = False):
+def plot_unit_prep(y_pred, y_true, metric, plotfold = False):
 	''' Prepare mean_x, mean_y array for classifier evaludation, from predicted y and real y.
 	Keyword arguments:
 	y_pred - - predicted y array
-	y_true - - true y target array'''
+	y_true - - true y target array
+	metric - - the metric in use to evaludate classifier
+	plotfold - - whether to plot indiviudal fold or not'''
 	mean_y= 0.0
 	mean_x = np.linspace(0, 1, 100)
 	if len(y_pred)==1:
@@ -141,7 +129,7 @@ def plot_unit_prep(y_pred, y_true, metric, sweeping = False):
 			if metric == 'roc':
 				x, y, thresholds = roc_curve(true, pred)
 				roc_auc = auc(x, y)
-				if not sweeping:
+				if plotfold:
 					pl.plot(x, y, lw=1, label='ROC fold %d (area = %0.2f)' % (i, roc_auc))
 				mean_y += np.interp(mean_x, x, y)
 			else:
@@ -175,7 +163,7 @@ def param_sweeping(clf, obj, X, y, param_dist, metric, param, clfName):
 		# new classifer each iteration
 		newclf = eval("clf.set_params("+ param + "= i)")
 		y_pred, y_true = run_clf(newclf, X, y, clfName)
-		mean_fpr, mean_tpr, mean_auc = plot_unit_prep(y_pred, y_true, metric, sweeping = True)
+		mean_fpr, mean_tpr, mean_auc = plot_unit_prep(y_pred, y_true, metric)
 		scores.append(mean_auc)
 		print("Area under the ROC curve : %f" % mean_auc)
 	fig = pl.figure(figsize=(8,6),dpi=150)
