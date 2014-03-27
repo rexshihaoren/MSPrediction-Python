@@ -4,7 +4,7 @@ import numpy as np
 from sklearn.cross_validation import StratifiedShuffleSplit, ShuffleSplit, StratifiedKFold, KFold
 from sklearn import metrics
 from sklearn.metrics import roc_curve, auc, average_precision_score, precision_recall_curve
-from sklearn.naive_bayes import BernoulliNB, GaussianNB
+from sklearn.naive_bayes import BernoulliNB, GaussianNB, MultinomialNB
 from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
@@ -164,6 +164,7 @@ def param_sweeping(clf, obj, X, y, param_dist, metric, param, clfName):
 		newclf = eval("clf.set_params("+ param + "= i)")
 		y_pred, y_true = run_clf(newclf, X, y, clfName)
 		mean_fpr, mean_tpr, mean_auc = plot_unit_prep(y_pred, y_true, metric)
+		print mean_auc
 		scores.append(mean_auc)
 		print("Area under the ROC curve : %f" % mean_auc)
 	fig = pl.figure(figsize=(8,6),dpi=150)
@@ -197,13 +198,13 @@ if __name__ == "__main__":
 	'''Some basic setup for prediction'''
 	####### This part can be modified to fulfill different needs ######
 	data_path = '../MSPrediction-R/Data Scripts/data/predData.h5'
-	obj = 'modfam2'
+	obj = 'fam2'
 	target = 'EnjoyLife'
 	########## Can use raw_input instead as well#######################
 	X, y, featureNames = pred_prep(data_path, obj, target)
 	classifiers = {"LogisticRegression": LogisticRegression(), 
 					"KNN": KNeighborsClassifier(),
-					"Naive_Bayes": GaussianNB(),
+					"Bayes": BernoulliNB(),
 					"SVM": SVC(probability = True),
 					"RandomForest": RandomForestClassifier(),
 					"LinearRegression": LinearRegression()
