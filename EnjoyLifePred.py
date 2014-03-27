@@ -164,15 +164,17 @@ def param_sweeping(clf, obj, X, y, param_dist, metric, param, clfName):
 		newclf = eval("clf.set_params("+ param + "= i)")
 		y_pred, y_true = run_clf(newclf, X, y, clfName)
 		mean_fpr, mean_tpr, mean_auc = plot_unit_prep(y_pred, y_true, metric)
-		print mean_auc
 		scores.append(mean_auc)
 		print("Area under the ROC curve : %f" % mean_auc)
 	fig = pl.figure(figsize=(8,6),dpi=150)
-	pl.plot(param_dist, scores, label = 'Parameter Sweeping Curve')
-	pl.xlabel('Parameter Distribution',fontsize=30)
-	pl.ylabel('AUC_ROC Score',fontsize=30)
+	paramdist_len = len(param_dist)
+	pl.plot(range(paramdist_len), scores, label = 'Parameter Sweeping Curve')
+	pl.xticks(range(paramdist_len), param_dist, size = 15, rotation = 45)
+	pl.xlabel(param.upper(),fontsize=30)
+	pl.ylabel(metric.upper(),fontsize=30)
 	pl.title('Parameter Sweeping Curve',fontsize=25)
 	pl.legend(loc='lower right')
+	pl.tight_layout()
 	fig.savefig('plots/'+obj+'/'+ clfName +'_' + param +'_'+'ps.pdf')
 	pl.show()
 
@@ -221,6 +223,4 @@ if __name__ == "__main__":
 		else:
 			print ("Your only choice now is to plot ROC and PR curves for "+clfName+" classifier")
 			clf_plot(clf, X, y, clfName, obj)
-
-
 
