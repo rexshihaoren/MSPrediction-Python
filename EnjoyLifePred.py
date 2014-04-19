@@ -13,6 +13,7 @@ from matplotlib.mlab import rec_drop_fields
 import itertools
 from inspect import getargspec
 import random
+from sklearn.grid_search import RandomizedSearchCV
 
 def pred_prep(data_path, obj, target):
 	'''A generalized method that could return the desired X and y, based on the file path of the data, the name of the obj, and the target column we are trying to predict.'''
@@ -52,30 +53,51 @@ def compare_clf(X, y, clfs, obj, metric = 'pr'):
 	fig.savefig('plots/'+obj+'/'+'clf_comparison_'+ metric +'.pdf')
 	pl.show()
 
-def run_clf(clf, X, y, clfName, rs = 0):
+def run_clf(clf, X, y, clfName, param_dist = None, opt = False,rs = 0):
 	'''Run a single classifier, return y_pred and y_truefor producing plots'''
 	# initialize predicted y, real y
 	y_true = []
 	y_pred = []
 	
-	print clf.get_params()
+	# print clf.get_params()
 	# Use 10-folds cross validation
 	cv = KFold(len(y), n_folds = 10, random_state = rs)
 	# cv = StratifiedKFold(y, n_folds = 10)
+	if opt:
+		#set up RandomizedSearchCV for parameter optimization using RandomForest for now
+		random_search = RandomizedSearchCV(clf, n_iter = 5,
+											param_distributions = param_dist,
+											scoring = "roc_auc",
+											verbose = 1,
+											refit = True,
+											n_jobs=-1)
+	else:
+		pass
 	for train_index, test_index in cv:
-		clf.fit(X[train_index], y[train_index])
-		if (clfName != "LinearRegression"):
-			proba = clf.predict_proba(X[test_index])
-			y_pred.append(proba[:,1])
+		#When Optimization is true
+		if opt:
+			random_search.fit(X[train_index], y[train_index])
+			if (clfName != "LinearRegression"):
+				proba = random_search.best_estimator_.predict_proba(X[test_index])
+				y_pred.append(proba[:,1])
+			else:
+				proba = random_search.best_estimator_.predict(X[train_index])
+				y_pred.append(proba)
+
 		else:
-			proba = clf.predict(X[test_index])
-			y_pred.append(proba)
+			clf.fit(X[train_index], y[train_index])
+			if (clfName != "LinearRegression"):
+				proba = clf.predict_proba(X[test_index])
+				y_pred.append(proba[:,1])
+			else:
+				proba = clf.predict(X[test_index])
+				y_pred.append(proba)
 		y_true.append(y[test_index])
 	return y_pred, y_true
 
-def clf_plot(clf, X, y, clfName, obj):
+def clf_plot(clf, X, y, clfName, obj, param_dist, opt):
 	# Produce data for plotting
-	y_pred, y_true = run_clf(clf,X, y,clfName)
+	y_pred, y_true = run_clf(clf,X, y,clfName, param_dist, opt)
 	# Plotting auc_roc and precision_recall
 	plot_roc(y_pred, y_true, clfName, obj)
 	plot_pr(y_pred, y_true, clfName, obj)
@@ -88,7 +110,7 @@ def plot_roc(y_pred, y_true, clfName, obj):
 	pl.plot([0, 1], [0, 1], '--', color=(0.7, 0.7, 0.7),lw=3,label='Random')
 	print("ROC AUC: %0.2f" % mean_auc)
 	pl.plot(mean_fpr, mean_tpr, 'k--',
-	             label='Mean ROC (area = %0.2f)' % mean_auc, lw=2)
+							 label='Mean ROC (area = %0.2f)' % mean_auc, lw=2)
 	pl.xlim([0.0, 1.00])
 	pl.ylim([0.0, 1.00])
 	pl.xlabel('False Positive Rate',size=30)
@@ -125,9 +147,9 @@ def plot_unit_prep(y_pred, y_true, metric, plotfold = False):
 	mean_y= 0.0
 	mean_x = np.linspace(0, 1, 100)
 	if len(y_pred)==1:
-	    folds = zip([y_pred],[y_true])
+			folds = zip([y_pred],[y_true])
 	else:
-	    folds = zip(y_pred,y_true)
+			folds = zip(y_pred,y_true)
 	for i, (pred,true) in enumerate(folds):
 		# pred & true represent each of the experiment folds
 		try:
@@ -209,6 +231,7 @@ if __name__ == "__main__":
 	target = 'EnjoyLife'
 	########## Can use raw_input instead as well#######################
 	X, y, featureNames = pred_prep(data_path, obj, target)
+	num_features = X.shape[1]
 	classifiers = {"LogisticRegression": LogisticRegression(), 
 					"KNN": KNeighborsClassifier(),
 					"Bayes": BernoulliNB(),
@@ -216,16 +239,41 @@ if __name__ == "__main__":
 					"RandomForest": RandomForestClassifier(),
 					"LinearRegression": LinearRegression()
 					}
+	# dictionaries of different classifiers, these can be eyeballed from my parameter sweeping curve
+	RFParamDist = {"n_estimators": range(25,45),
+				  "max_features": range(1, num_features + 1),
+				  "min_samples_split": range(1, 30),
+				  "min_samples_leaf": range(1, 10),
+				  "bootstrap": [True, False],
+				  "criterion": ["gini", "entropy"]}
+	logRegParamDist = {}
+	KNNParamDist = {}
+	BayesParamDist = {}
+	SVMParamDist = {}
+	LinRegParamDist = {}
+	# a dictionary storing the param_dist for different classifiers
+	param_dist_dict = {"LogisticRegression": logRegParamDist,
+					"KNN":KNNParamDist,
+					"Bayes":BayesParamDist,
+					"SVM":SVMParamDist,
+					"RandomForest":RFParamDist,
+					"LinearRegression":LinRegParamDist
+					}
+					
 	com_clf = raw_input("Compare classifiers? (Y/N) ")
 	if com_clf == "Y":
 		compare_clf(X, y, classifiers, obj)
 	else:
 		clf, clfName = choose_clf(classifiers)
 		param_sweep = raw_input("Parameter Sweeping? (Y/N) ")
-		if param_sweep == "Y":
+		if param_sweep == "Y" or param_sweep == "y":
 			param, param_dist, metric = param_sweep_select(clf)
 			param_sweeping(clf, obj, X, y, param_dist, metric, param, clfName)
 		else:
 			print ("Your only choice now is to plot ROC and PR curves for "+clfName+" classifier")
-			clf_plot(clf, X, y, clfName, obj)
+			# Asking whether to optimize
+			opt = raw_input("Optimization? (Y/N)")
+			opt = (opt== "Y" or opt == "y")
+			param_dist = param_dist_dict[clfName]
+			clf_plot(clf, X, y, clfName, obj, param_dist, opt)
 
