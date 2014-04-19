@@ -12,6 +12,7 @@ from sklearn.ensemble import RandomForestClassifier
 from matplotlib.mlab import rec_drop_fields
 import itertools
 from inspect import getargspec
+import random
 
 def pred_prep(data_path, obj, target):
 	'''A generalized method that could return the desired X and y, based on the file path of the data, the name of the obj, and the target column we are trying to predict.'''
@@ -27,14 +28,15 @@ def pred_prep(data_path, obj, target):
 	y = y.view((np.float64, 1))
 	return X, y, featureNames
 
-def compare_clf(X, y, clfs, obj, metric = 'roc'):
+def compare_clf(X, y, clfs, obj, metric = 'pr'):
 	'''Compare classifiers with mean roc_auc'''
 	fig = pl.figure(figsize=(8,6),dpi=150)
+	rs0 = random.randint(1,1000)
 	# cv = KFold(len(y), n_folds = 10, shuffle = True)
 	# cv = StratifiedKFold(y, n_folds = 10)
 	for clfName in clfs.keys():
 		clf = clfs[clfName]
-		y_pred, y_true = run_clf(clf, X, y, clfName)
+		y_pred, y_true = run_clf(clf, X, y, clfName, rs = rs0)
 		mean_fpr, mean_tpr, mean_auc = plot_unit_prep(y_pred, y_true, metric)
 		print("Area under the ROC curve : %f" % mean_auc)
 		# Plot ROC curve
@@ -44,19 +46,22 @@ def compare_clf(X, y, clfs, obj, metric = 'roc'):
 	pl.ylim([0.0, 1.0])
 	pl.xlabel('False Positive Rate',fontsize=30)
 	pl.ylabel('True Positive Rate',fontsize=30)
-	pl.title('Receiver operating characteristic',fontsize=25)
+	pl.title('Receiver Operating Characteristic',fontsize=25)
 	pl.legend(loc='lower right')
 	pl.tight_layout()
-	fig.savefig('plots/'+obj+'/'+'clf_comparison.pdf')
+	fig.savefig('plots/'+obj+'/'+'clf_comparison_'+ metric +'.pdf')
 	pl.show()
 
-def run_clf(clf, X, y, clfName):
+def run_clf(clf, X, y, clfName, rs = 0):
 	'''Run a single classifier, return y_pred and y_truefor producing plots'''
 	# initialize predicted y, real y
 	y_true = []
 	y_pred = []
+	
+	print clf.get_params()
 	# Use 10-folds cross validation
-	cv = StratifiedKFold(y, n_folds = 10)
+	cv = KFold(len(y), n_folds = 10, random_state = rs)
+	# cv = StratifiedKFold(y, n_folds = 10)
 	for train_index, test_index in cv:
 		clf.fit(X[train_index], y[train_index])
 		if (clfName != "LinearRegression"):
