@@ -65,7 +65,7 @@ def run_clf(clf, X, y, clfName, param_dist = None, opt = False,rs = 0):
 	# cv = StratifiedKFold(y, n_folds = 10)
 	if opt:
 		#set up RandomizedSearchCV for parameter optimization using RandomForest for now
-		random_search = RandomizedSearchCV(clf, n_iter = 5,
+		random_search = RandomizedSearchCV(clf, n_iter = 100,
 											param_distributions = param_dist,
 											scoring = "roc_auc",
 											verbose = 1,
