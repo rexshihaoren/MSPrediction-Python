@@ -55,17 +55,18 @@ def compare_clf(X, y, clfs, obj, metric = 'pr'):
 
 def run_clf(clf, X, y, clfName, param_dist = None, opt = False,rs = 0):
 	'''Run a single classifier, return y_pred and y_truefor producing plots'''
+	# generate a random state
 	# initialize predicted y, real y
 	y_true = []
 	y_pred = []
 	
 	# print clf.get_params()
 	# Use 10-folds cross validation
-	cv = KFold(len(y), n_folds = 10, random_state = rs)
-	# cv = StratifiedKFold(y, n_folds = 10)
+	cv = KFold(len(y), n_folds = 10, shuffle = True, random_state = rs)
+
 	if opt:
 		#set up RandomizedSearchCV for parameter optimization using RandomForest for now
-		random_search = RandomizedSearchCV(clf, n_iter = 100,
+		random_search = RandomizedSearchCV(clf, n_iter = 20,
 											param_distributions = param_dist,
 											scoring = "roc_auc",
 											verbose = 1,
@@ -74,6 +75,7 @@ def run_clf(clf, X, y, clfName, param_dist = None, opt = False,rs = 0):
 	else:
 		pass
 	for train_index, test_index in cv:
+
 		#When Optimization is true
 		if opt:
 			random_search.fit(X[train_index], y[train_index])
@@ -81,7 +83,8 @@ def run_clf(clf, X, y, clfName, param_dist = None, opt = False,rs = 0):
 				proba = random_search.best_estimator_.predict_proba(X[test_index])
 				y_pred.append(proba[:,1])
 			else:
-				proba = random_search.best_estimator_.predict(X[train_index])
+				improve_clf = random_search.best_estimator_
+				proba = improve_clf.predict(X[train_index])
 				y_pred.append(proba)
 
 		else:
@@ -97,7 +100,15 @@ def run_clf(clf, X, y, clfName, param_dist = None, opt = False,rs = 0):
 
 def clf_plot(clf, X, y, clfName, obj, param_dist, opt):
 	# Produce data for plotting
-	y_pred, y_true = run_clf(clf,X, y,clfName, param_dist, opt)
+	# CVIter # of times of CV
+	CVIter = 10
+	y_pred = []
+	y_true = []
+	for _ in range(CVIter):
+		rs0 = random.randint(1,1000)
+		y_pred0, y_true0 = run_clf(clf,X, y,clfName, param_dist, opt, rs = rs0)
+		y_pred += y_pred0
+		y_true += y_true0
 	# Plotting auc_roc and precision_recall
 	plot_roc(y_pred, y_true, clfName, obj)
 	plot_pr(y_pred, y_true, clfName, obj)
@@ -157,7 +168,8 @@ def plot_unit_prep(y_pred, y_true, metric, plotfold = False):
 				x, y, thresholds = roc_curve(true, pred)
 				roc_auc = auc(x, y)
 				if plotfold:
-					pl.plot(x, y, lw=1, label='ROC fold %d (area = %0.2f)' % (i, roc_auc))
+					# pl.plot(x, y, lw=1, label='ROC fold %d (area = %0.2f)' % (i, roc_auc))
+					pl.plot(x, y, color='grey', alpha = 0.15, lw=1.2)
 				mean_y += np.interp(mean_x, x, y)
 			else:
 				#precision-recall 'pr', y is prec, x is rec. rec is a decreasing array
