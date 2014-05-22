@@ -49,6 +49,7 @@ def fitAlgo(clf, Xtrain, Ytrain, opt = False, param_dict = None, opt_metric = 'r
     opt - - whether to do optimization or not
     '''
     if opt:
+    	assert(param_dict != None)
         assert(map(lambda x: isinstance(param_dict[x],list), param_dict))
         rs = RandomizedSearchCV(estimator = clf, n_iter = n_iter,
                                 param_distributions = param_dict,
@@ -92,21 +93,23 @@ def pred_prep(data_path, obj, target):
 	y = y.view((np.float64, 1))
 	return X, y, featureNames
 
-def compare_clf(X, y, clfs, obj, metric = 'roc'):
+
+def compare_clf(X, y, clfs, obj, metric = 'roc', opt = False):
 	'''Compare classifiers with mean roc_auc'''
-	fig = pl.figure(figsize=(8,6),dpi=150)
 	# cv = KFold(len(y), n_folds = 10, shuffle = True)
 	# cv = StratifiedKFold(y, n_folds = 10)
+	mean_everything= {}
 	for clfName in clfs.keys():
 		clf = clfs[clfName]
-		y_pred, y_true = testAlgo(clf, X, y, clfName)
-		print "y_pred"
-		print y_pred
-		print "y_true"
-		print y_true
-		mean_fpr, mean_tpr, mean_auc = plot_unit_prep(y_pred, y_true, metric)
-		print("Area under the ROC curve : %f" % mean_auc)
-		# Plot ROC curve
+		param_dict = param_dict_list_default[clfName]
+		y_pred, y_true = testAlgo(clf, X, y, clfName, opt, param_dict)
+		# output results and plot folds
+		mean_fpr, mean_tpr, mean_auc = plot_roc(y_pred, y_true, clfName, obj, )
+		mean_everything[clfName] = [mean_fpr, mean_tpr, mean_auc]
+	# Compare mean score of all clfs
+	fig = pl.figure(figsize=(8,6),dpi=150)
+	for clfName in  mean_everything:
+		[mean_fpr, mean_tpr, mean_auc] = mean_everything[clfName]
 		pl.plot(mean_fpr, mean_tpr, lw=3, label = clfName + ' (area = %0.2f)' %mean_auc)
 	pl.plot([0, 1], [0, 1], 'k--')
 	pl.xlim([0.0, 1.0])
@@ -119,7 +122,7 @@ def compare_clf(X, y, clfs, obj, metric = 'roc'):
 	fig.savefig('plots/'+obj+'/'+'clf_comparison_'+ metric +'.pdf')
 	pl.show()
 
-def plot_roc(y_pred, y_true, clfName, obj):
+def plot_roc(y_pred, y_true, clfName, obj, customID = ""):
 	'''Plots the ROC Curve'''
 	fig = pl.figure(figsize=(8,6),dpi=150)
 	mean_fpr, mean_tpr, mean_auc = plot_unit_prep(y_pred, y_true, 'roc', plotfold = True)
@@ -135,8 +138,9 @@ def plot_roc(y_pred, y_true, clfName, obj):
 	pl.title('Receiver operating characteristic',size=25)
 	pl.legend(loc="lower right")
 	pl.tight_layout()
-	fig.savefig('plots/'+obj+'/'+clfName+'_roc_auc.pdf')
+	fig.savefig('plots/'+obj+'/'+clfName+'_roc_auc' + customID + '.pdf')
 	pl.show()
+	return mean_fpr, mean_tpr, mean_auc
 
 def plot_pr(y_pred, y_true,clfName, obj):
 	'''Plot the Precision-Recall Curve'''
@@ -171,10 +175,6 @@ def plot_unit_prep(y_pred, y_true, metric, plotfold = False):
 	for i, (pred,true) in enumerate(folds):
 		# pred & true represent each of the experiment folds
 		try:
-			# print "pred"
-			# print pred
-			# print "true"
-			# print true
 			if metric == 'roc':
 				x, y, thresholds = roc_curve(true, pred)
 				roc_auc = auc(x, y)
@@ -282,10 +282,16 @@ if __name__ == "__main__":
 					"RandomForest":RFParamDist,
 					"LinearRegression":LinRegParamDist
 					}
-					
+	global param_dict_list_default = {"LogisticRegression": logRegParamDist, 
+					"KNN": KNNParamDist,
+					"Bayes": BayesParamDist,
+					"SVM": SVMParamDist,
+					"RandomForest": RFParamDist,
+					"LinearRegression": LinRegParamDist}
 	com_clf = raw_input("Compare classifiers? (Y/N) ")
 	if com_clf == "Y":
-		compare_clf(X, y, classifiers, obj)
+		com_clf_opt = raw_input ("With optimization? (Y/N)")
+		compare_clf(X, y, clfs, obj, metric = 'roc', opt = com_clf_opt)
 	else:
 		clf, clfName = choose_clf(classifiers)
 		param_sweep = raw_input("Parameter Sweeping? (Y/N) ")
