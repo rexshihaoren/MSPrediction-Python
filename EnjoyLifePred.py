@@ -17,9 +17,7 @@ from sklearn.grid_search import RandomizedSearchCV
 
 # Testing Pipeline:
 def testAlgo(clf, X, y, clfName, opt = False, param_dict = None, opt_metric = 'roc_auc', n_iter = 5, folds = 10, times = 10):
-    '''
-    An algorithm that output the perdicted y and real y
-    '''
+    '''An algorithm that output the perdicted y and real y'''
     y_true = []
     y_pred = []
     for i in range(0, times):
