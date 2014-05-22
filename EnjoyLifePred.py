@@ -15,6 +15,71 @@ from inspect import getargspec
 import random
 from sklearn.grid_search import RandomizedSearchCV
 
+# Testing Pipeline:
+def testAlgo(clf, X, y, clfName, opt = False, param_dict = None, opt_metric = 'roc_auc', n_iter = 5, folds = 10, times = 10):
+    '''
+    An algorithm that output the perdicted y and real y
+    '''
+    y_true = []
+    y_pred = []
+    for i in range(0, times):
+    	print str(i) +" iteration of testAlgo"
+        rs = random.randint(1,1000)
+        cv = KFold(len(y), n_folds = folds, shuffle = True, random_state = rs)
+        for train_index, test_index in cv:
+            impr_clf  = fitAlgo(clf, X[train_index], y[train_index], opt, param_dict, opt_metric, n_iter)
+            if (clfName != "LinearRegression"):
+                proba = impr_clf.predict_proba(X[test_index])
+                y_pred0 = proba[:,1]
+            else:
+                proba = impr_clf.predict(X[test_index])
+                y_pred0 = proba
+            y_true0 = y[test_index]
+            y_pred.append(y_pred0)
+            y_true.append(y_true0)
+    return y_pred, y_true
+
+# Evaluation pipeline: 
+def fitAlgo(clf, Xtrain, Ytrain, opt = False, param_dict = None, opt_metric = 'roc_auc', n_iter = 5):
+    '''Return the fitted classifier
+    Keyword arguments:
+    clf - - base classifier
+    Xtrain - - training feature matrix
+    Ytrain - - training target array
+    param_dict - - the parameter distribution of param, grids space, if opt == False, every element should have length 1
+    opt_metric - - optimization metric
+    opt - - whether to do optimization or not
+    '''
+    if opt:
+        assert(map(lambda x: isinstance(param_dict[x],list), param_dict))
+        rs = RandomizedSearchCV(estimator = clf, n_iter = n_iter,
+                                param_distributions = param_dict,
+                                scoring = opt_metric,
+                                refit = True,
+                                n_jobs=-1, cv = 5, verbose = 3)
+
+        rs.fit(Xtrain, Ytrain)
+        return rs.best_estimator_
+    else:
+        if param_dict != None:
+            assert(map(lambda x: not isinstance(param_dict[x], list), param_dict))
+        # for k in param_dict.keys():
+        #     clf.set_params(k = param_dict[k])
+        clf.fit(Xtrain, Ytrain)
+        return clf
+
+
+
+# Meta-functions
+def clf_plot(clf, X, y, clfName, obj, opt, param_dist):
+	'''Plot experiment results'''
+	#Produce data for plotting
+	y_pred, y_true = testAlgo(clf, X, y, clfName, opt, param_dist)
+	# Plotting auc_roc and precision_recall
+	plot_roc(y_pred, y_true, clfName, obj)
+	# Plotting precision_recall
+	# plot_pr(y_pred, y_true, clfName, obj)
+
 def pred_prep(data_path, obj, target):
 	'''A generalized method that could return the desired X and y, based on the file path of the data, the name of the obj, and the target column we are trying to predict.'''
 	f=hp.File(data_path, 'r+')
@@ -29,15 +94,18 @@ def pred_prep(data_path, obj, target):
 	y = y.view((np.float64, 1))
 	return X, y, featureNames
 
-def compare_clf(X, y, clfs, obj, metric = 'pr'):
+def compare_clf(X, y, clfs, obj, metric = 'roc'):
 	'''Compare classifiers with mean roc_auc'''
 	fig = pl.figure(figsize=(8,6),dpi=150)
-	rs0 = random.randint(1,1000)
 	# cv = KFold(len(y), n_folds = 10, shuffle = True)
 	# cv = StratifiedKFold(y, n_folds = 10)
 	for clfName in clfs.keys():
 		clf = clfs[clfName]
-		y_pred, y_true = run_clf(clf, X, y, clfName, rs = rs0)
+		y_pred, y_true = testAlgo(clf, X, y, clfName)
+		print "y_pred"
+		print y_pred
+		print "y_true"
+		print y_true
 		mean_fpr, mean_tpr, mean_auc = plot_unit_prep(y_pred, y_true, metric)
 		print("Area under the ROC curve : %f" % mean_auc)
 		# Plot ROC curve
@@ -52,66 +120,6 @@ def compare_clf(X, y, clfs, obj, metric = 'pr'):
 	pl.tight_layout()
 	fig.savefig('plots/'+obj+'/'+'clf_comparison_'+ metric +'.pdf')
 	pl.show()
-
-def run_clf(clf, X, y, clfName, param_dist = None, opt = False,rs = 0):
-	'''Run a single classifier, return y_pred and y_truefor producing plots'''
-	# generate a random state
-	# initialize predicted y, real y
-	y_true = []
-	y_pred = []
-	
-	# print clf.get_params()
-	# Use 10-folds cross validation
-	cv = KFold(len(y), n_folds = 10, shuffle = True, random_state = rs)
-
-	if opt:
-		#set up RandomizedSearchCV for parameter optimization using RandomForest for now
-		random_search = RandomizedSearchCV(clf, n_iter = 20,
-											param_distributions = param_dist,
-											scoring = "roc_auc",
-											verbose = 1,
-											refit = True,
-											n_jobs=-1)
-	else:
-		pass
-	for train_index, test_index in cv:
-
-		#When Optimization is true
-		if opt:
-			random_search.fit(X[train_index], y[train_index])
-			if (clfName != "LinearRegression"):
-				proba = random_search.best_estimator_.predict_proba(X[test_index])
-				y_pred.append(proba[:,1])
-			else:
-				improve_clf = random_search.best_estimator_
-				proba = improve_clf.predict(X[train_index])
-				y_pred.append(proba)
-
-		else:
-			clf.fit(X[train_index], y[train_index])
-			if (clfName != "LinearRegression"):
-				proba = clf.predict_proba(X[test_index])
-				y_pred.append(proba[:,1])
-			else:
-				proba = clf.predict(X[test_index])
-				y_pred.append(proba)
-		y_true.append(y[test_index])
-	return y_pred, y_true
-
-def clf_plot(clf, X, y, clfName, obj, param_dist, opt):
-	# Produce data for plotting
-	# CVIter # of times of CV
-	CVIter = 10
-	y_pred = []
-	y_true = []
-	for _ in range(CVIter):
-		rs0 = random.randint(1,1000)
-		y_pred0, y_true0 = run_clf(clf,X, y,clfName, param_dist, opt, rs = rs0)
-		y_pred += y_pred0
-		y_true += y_true0
-	# Plotting auc_roc and precision_recall
-	plot_roc(y_pred, y_true, clfName, obj)
-	plot_pr(y_pred, y_true, clfName, obj)
 
 def plot_roc(y_pred, y_true, clfName, obj):
 	'''Plots the ROC Curve'''
@@ -158,12 +166,17 @@ def plot_unit_prep(y_pred, y_true, metric, plotfold = False):
 	mean_y= 0.0
 	mean_x = np.linspace(0, 1, 100)
 	if len(y_pred)==1:
+			print "y_pred length 1"
 			folds = zip([y_pred],[y_true])
 	else:
 			folds = zip(y_pred,y_true)
 	for i, (pred,true) in enumerate(folds):
 		# pred & true represent each of the experiment folds
 		try:
+			# print "pred"
+			# print pred
+			# print "true"
+			# print true
 			if metric == 'roc':
 				x, y, thresholds = roc_curve(true, pred)
 				roc_auc = auc(x, y)
@@ -252,10 +265,10 @@ if __name__ == "__main__":
 					"LinearRegression": LinearRegression()
 					}
 	# dictionaries of different classifiers, these can be eyeballed from my parameter sweeping curve
-	RFParamDist = {"n_estimators": range(25,45),
+	RFParamDist = {"n_estimators": range(25,30),
 				  "max_features": range(1, num_features + 1),
-				  "min_samples_split": range(1, 30),
-				  "min_samples_leaf": range(1, 10),
+				  "min_samples_split": range(1, 8),
+				  "min_samples_leaf": range(1, 8),
 				  "bootstrap": [True, False],
 				  "criterion": ["gini", "entropy"]}
 	logRegParamDist = {}
@@ -287,5 +300,5 @@ if __name__ == "__main__":
 			opt = raw_input("Optimization? (Y/N)")
 			opt = (opt== "Y" or opt == "y")
 			param_dist = param_dist_dict[clfName]
-			clf_plot(clf, X, y, clfName, obj, param_dist, opt)
+			clf_plot(clf, X, y, clfName, obj, opt, param_dist)
 
