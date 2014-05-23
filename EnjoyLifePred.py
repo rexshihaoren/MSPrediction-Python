@@ -20,7 +20,8 @@ def testAlgo(clf, X, y, clfName, opt = False, param_dict = None, opt_metric = 'r
     '''An algorithm that output the perdicted y and real y'''
     y_true = []
     y_pred = []
-    param_dict = param_dist_dict[clfName]
+    if opt:
+    	param_dict = param_dist_dict[clfName]
     for i in range(0, times):
     	print str(i) +" iteration of testAlgo"
         rs = random.randint(1,1000)
@@ -75,9 +76,9 @@ def clf_plot(clf, X, y, clfName, obj, opt, param_dist):
 	#Produce data for plotting
 	y_pred, y_true = testAlgo(clf, X, y, clfName, opt, param_dist)
 	# Plotting auc_roc and precision_recall
-	plot_roc(y_pred, y_true, clfName, obj)
+	plot_roc(y_pred, y_true, clfName, obj, opt)
 	# Plotting precision_recall
-	# plot_pr(y_pred, y_true, clfName, obj)
+	# plot_pr(y_pred, y_true, clfName, ob, optj)
 
 def pred_prep(data_path, obj, target):
 	'''A generalized method that could return the desired X and y, based on the file path of the data, the name of the obj, and the target column we are trying to predict.'''
@@ -100,7 +101,7 @@ def compare_clf(X, y, clfs, obj, metric = 'roc', opt = False):
 		clf = clfs[clfName]
 		y_pred, y_true = testAlgo(clf, X, y, clfName, opt)
 		# output results and plot folds
-		mean_fpr, mean_tpr, mean_auc = plot_roc(y_pred, y_true, clfName, obj)
+		mean_fpr, mean_tpr, mean_auc = plot_roc(y_pred, y_true, clfName, obj, opt)
 		mean_everything[clfName] = [mean_fpr, mean_tpr, mean_auc]
 	# Compare mean score of all clfs
 	fig = pl.figure(figsize=(8,6),dpi=150)
@@ -118,11 +119,11 @@ def compare_clf(X, y, clfs, obj, metric = 'roc', opt = False):
 	if opt:
 		save_path = 'plots/'+obj+'/'+'clf_comparison_'+ metric +'_opt.pdf'
 	else:
-		save_path = 'plots/'+obj+'/'+'clf_comparison_'+ metric +'.pdf'
+		save_path = 'plots/'+obj+'/'+'clf_comparison_'+ metric +'_noopt.pdf'
 	fig.savefig(save_path)
 	pl.show()
 
-def plot_roc(y_pred, y_true, clfName, obj):
+def plot_roc(y_pred, y_true, clfName, obj, opt):
 	'''Plots the ROC Curve'''
 	fig = pl.figure(figsize=(8,6),dpi=150)
 	mean_fpr, mean_tpr, mean_auc = plot_unit_prep(y_pred, y_true, 'roc', plotfold = True)
@@ -138,11 +139,15 @@ def plot_roc(y_pred, y_true, clfName, obj):
 	pl.title('Receiver operating characteristic',size=25)
 	pl.legend(loc="lower right")
 	pl.tight_layout()
-	fig.savefig('plots/'+obj+'/'+clfName+'_roc_auc'+ '.pdf')
+	if opt:
+		save_path = 'plots/'+obj+'/'+clfName+'_roc_opt.pdf'
+	else:
+		save_path = 'plots/'+obj+'/'+clfName+'_roc_noopt.pdf'
+	fig.savefig(save_path)
 	pl.show()
 	return mean_fpr, mean_tpr, mean_auc
 
-def plot_pr(y_pred, y_true,clfName, obj):
+def plot_pr(y_pred, y_true,clfName, obj, opt):
 	'''Plot the Precision-Recall Curve'''
 	fig = pl.figure(figsize=(8,6),dpi=150)
 	mean_rec, mean_prec, mean_area = plot_unit_prep(y_pred, y_true, 'pr')
@@ -155,7 +160,11 @@ def plot_pr(y_pred, y_true,clfName, obj):
 	pl.xlim([0.0, 1.0])
 	pl.title('Precision-Recall: AUC=%0.2f' % mean_area)
 	pl.legend(loc="lower left")
-	fig.savefig('plots/'+obj+'/'+clfName+'_pr.pdf')
+	if opt:
+		save_path = 'plots/'+obj+'/'+clfName+'_pr_opt.pdf'
+	else:
+		save_path = 'plots/'+obj+'/'+clfName+'_pr_noopt.pdf'
+	fig.savefig(save_path)
 	pl.show()
 
 def plot_unit_prep(y_pred, y_true, metric, plotfold = False):
