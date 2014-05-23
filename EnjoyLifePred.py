@@ -16,16 +16,18 @@ import random
 from sklearn.grid_search import RandomizedSearchCV
 
 # Testing Pipeline:
-def testAlgo(clf, X, y, clfName, opt = False, param_dict = None, opt_metric = 'roc_auc', n_iter = 5, folds = 10, times = 10):
+def testAlgo(clf, X, y, clfName, opt = False, param_dict = None, opt_metric = 'roc_auc', n_iter = 2, folds = 2, times =  2):
     '''An algorithm that output the perdicted y and real y'''
     y_true = []
     y_pred = []
+    param_dict = param_dist_dict[clfName]
     for i in range(0, times):
     	print str(i) +" iteration of testAlgo"
         rs = random.randint(1,1000)
         cv = KFold(len(y), n_folds = folds, shuffle = True, random_state = rs)
         for train_index, test_index in cv:
             impr_clf  = fitAlgo(clf, X[train_index], y[train_index], opt, param_dict, opt_metric, n_iter)
+            print impr_clf
             if (clfName != "LinearRegression"):
                 proba = impr_clf.predict_proba(X[test_index])
                 y_pred0 = proba[:,1]
@@ -55,19 +57,17 @@ def fitAlgo(clf, Xtrain, Ytrain, opt = False, param_dict = None, opt_metric = 'r
                                 param_distributions = param_dict,
                                 scoring = opt_metric,
                                 refit = True,
-                                n_jobs=-1, cv = 5, verbose = 3)
+                                n_jobs=-1, cv = 3, verbose = 3)
 
         rs.fit(Xtrain, Ytrain)
         return rs.best_estimator_
     else:
         if param_dict != None:
             assert(map(lambda x: not isinstance(param_dict[x], list), param_dict))
-        # for k in param_dict.keys():
-        #     clf.set_params(k = param_dict[k])
+            for k in param_dict.keys():
+	            clf.set_params(k = param_dict[k])
         clf.fit(Xtrain, Ytrain)
         return clf
-
-
 
 # Meta-functions
 def clf_plot(clf, X, y, clfName, obj, opt, param_dist):
@@ -93,18 +93,14 @@ def pred_prep(data_path, obj, target):
 	y = y.view((np.float64, 1))
 	return X, y, featureNames
 
-
 def compare_clf(X, y, clfs, obj, metric = 'roc', opt = False):
 	'''Compare classifiers with mean roc_auc'''
-	# cv = KFold(len(y), n_folds = 10, shuffle = True)
-	# cv = StratifiedKFold(y, n_folds = 10)
 	mean_everything= {}
 	for clfName in clfs.keys():
 		clf = clfs[clfName]
-		param_dict = param_dict_list_default[clfName]
-		y_pred, y_true = testAlgo(clf, X, y, clfName, opt, param_dict)
+		y_pred, y_true = testAlgo(clf, X, y, clfName, opt)
 		# output results and plot folds
-		mean_fpr, mean_tpr, mean_auc = plot_roc(y_pred, y_true, clfName, obj, )
+		mean_fpr, mean_tpr, mean_auc = plot_roc(y_pred, y_true, clfName, obj)
 		mean_everything[clfName] = [mean_fpr, mean_tpr, mean_auc]
 	# Compare mean score of all clfs
 	fig = pl.figure(figsize=(8,6),dpi=150)
@@ -119,10 +115,14 @@ def compare_clf(X, y, clfs, obj, metric = 'roc', opt = False):
 	pl.title('Receiver Operating Characteristic',fontsize=25)
 	pl.legend(loc='lower right')
 	pl.tight_layout()
-	fig.savefig('plots/'+obj+'/'+'clf_comparison_'+ metric +'.pdf')
+	if opt:
+		save_path = 'plots/'+obj+'/'+'clf_comparison_'+ metric +'_opt.pdf'
+	else:
+		save_path = 'plots/'+obj+'/'+'clf_comparison_'+ metric +'.pdf'
+	fig.savefig(save_path)
 	pl.show()
 
-def plot_roc(y_pred, y_true, clfName, obj, customID = ""):
+def plot_roc(y_pred, y_true, clfName, obj):
 	'''Plots the ROC Curve'''
 	fig = pl.figure(figsize=(8,6),dpi=150)
 	mean_fpr, mean_tpr, mean_auc = plot_unit_prep(y_pred, y_true, 'roc', plotfold = True)
@@ -138,7 +138,7 @@ def plot_roc(y_pred, y_true, clfName, obj, customID = ""):
 	pl.title('Receiver operating characteristic',size=25)
 	pl.legend(loc="lower right")
 	pl.tight_layout()
-	fig.savefig('plots/'+obj+'/'+clfName+'_roc_auc' + customID + '.pdf')
+	fig.savefig('plots/'+obj+'/'+clfName+'_roc_auc'+ '.pdf')
 	pl.show()
 	return mean_fpr, mean_tpr, mean_auc
 
@@ -212,7 +212,7 @@ def param_sweeping(clf, obj, X, y, param_dist, metric, param, clfName):
 		y_pred = []
 		# new classifer each iteration
 		newclf = eval("clf.set_params("+ param + "= i)")
-		y_pred, y_true = run_clf(newclf, X, y, clfName)
+		y_pred, y_true = testAlgo(newclf, X, y, clfName)
 		mean_fpr, mean_tpr, mean_auc = plot_unit_prep(y_pred, y_true, metric)
 		scores.append(mean_auc)
 		print("Area under the ROC curve : %f" % mean_auc)
@@ -269,11 +269,28 @@ if __name__ == "__main__":
 				  "min_samples_leaf": range(1, 8),
 				  "bootstrap": [True, False],
 				  "criterion": ["gini", "entropy"]}
-	logRegParamDist = {}
-	KNNParamDist = {}
-	BayesParamDist = {}
-	SVMParamDist = {}
-	LinRegParamDist = {}
+	# ['penalty', 'dual', 'tol', 'C', 'fit_intercept', 'intercept_scaling', 'class_weight', 'random_state']
+	logRegParamDist = {"penalty":['l1','l2'],
+						"C": np.linspace(.1, 1, 10),
+						"fit_intercept":[True, False],
+						"intercept_scaling":(.1, 1, 10),
+						"tol":[1e-2, 1e-3,1e-4, 1e-5]}
+	# ['n_neighbors', 'weights', 'algorithm', 'leaf_size', 'p', 'metric']
+	KNNParamDist = {"n_neighbors":range(5,7),
+					"algorithm":['auto', 'ball_tree', 'kd_tree', 'brute'],
+					"leaf_size":range(25,30),
+					"p":range(1,3)}
+	# ['alpha', 'binarize', 'fit_prior', 'class_prior']
+	BayesParamDist = {"alpha": np.linspace(.1, 1, 10),
+					"binarize": np.linspace(.1, 1, 10).tolist()}
+	# ['C', 'kernel', 'degree', 'gamma', 'coef0', 'shrinking', 'probability', 'tol', 'cache_size', 'class_weight', 'verbose', 'max_iter', 'random_state']
+	SVMParamDist = {"C": np.linspace(.1, 1, 10),
+					"kernel":['linear','poly','rbf'],
+					"shrinking":[True, False],
+					"tol":[1e-2, 1e-3,1e-4, 1e-5]}
+	# ['fit_intercept', 'normalize', 'copy_X']
+	LinRegParamDist = {"fit_intercept":[True, False],
+						"normalize": [True, False]}
 	# a dictionary storing the param_dist for different classifiers
 	param_dist_dict = {"LogisticRegression": logRegParamDist,
 					"KNN":KNNParamDist,
@@ -282,16 +299,11 @@ if __name__ == "__main__":
 					"RandomForest":RFParamDist,
 					"LinearRegression":LinRegParamDist
 					}
-	global param_dict_list_default = {"LogisticRegression": logRegParamDist, 
-					"KNN": KNNParamDist,
-					"Bayes": BayesParamDist,
-					"SVM": SVMParamDist,
-					"RandomForest": RFParamDist,
-					"LinearRegression": LinRegParamDist}
 	com_clf = raw_input("Compare classifiers? (Y/N) ")
 	if com_clf == "Y":
 		com_clf_opt = raw_input ("With optimization? (Y/N)")
-		compare_clf(X, y, clfs, obj, metric = 'roc', opt = com_clf_opt)
+		com_clf_opt = (com_clf_opt == 'Y')
+		compare_clf(X, y, classifiers, obj, metric = 'roc', opt = com_clf_opt)
 	else:
 		clf, clfName = choose_clf(classifiers)
 		param_sweep = raw_input("Parameter Sweeping? (Y/N) ")
@@ -305,4 +317,3 @@ if __name__ == "__main__":
 			opt = (opt== "Y" or opt == "y")
 			param_dist = param_dist_dict[clfName]
 			clf_plot(clf, X, y, clfName, obj, opt, param_dist)
-
