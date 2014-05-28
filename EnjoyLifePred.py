@@ -255,43 +255,6 @@ def choose_clf(classifiers):
 	clf = classifiers[clfName]
 	return clf, clfName
 
-
-def main():
-	'''Some basic setup for prediction'''
-	####### This part can be modified to fulfill different needs ######
-	data_path = '../MSPrediction-R/Data Scripts/data/predData.h5'
-	obj = 'fam2'
-	target = 'EnjoyLife'
-	########## Can use raw_input instead as well#######################
-	X, y, featureNames = pred_prep(data_path, obj, target)
-	num_features = X.shape[1]
-	random_forest_params["max_features"] = range(1, num_features + 1)
-	# com_clf = raw_input("Compare classifiers? (Y/N) ")
-	com_clf = "Y"
-	if com_clf == "Y":
-		# com_clf_opt = raw_input ("With optimization? (Y/N)")
-		com_clf_opt = "Y"
-		com_clf_opt = (com_clf_opt == 'Y')
-		compare_clf(X, y, classifiers, obj, metric = 'roc', opt = com_clf_opt, n_iter=50, folds=10, times=10)
-	else:
-		clf, clfName = choose_clf(classifiers)
-		param_sweep = raw_input("Parameter Sweeping? (Y/N) ")
-		# param_sweep ="Y"
-		if param_sweep == "Y" or param_sweep == "y":
-			param, param_dist, metric = param_sweep_select(clf)
-			param_sweeping(clf, obj, X, y, param_dist, metric, param, clfName)
-		else:
-			print ("Your only choice now is to plot ROC and PR curves for "+clfName+" classifier")
-			# Asking whether to optimize
-			opt = raw_input("Optimization? (Y/N)")
-			opt = (opt== "Y" or opt == "y")
-			param_dist = param_dist_dict[clfName]
-			clf_plot(clf, X, y, clfName, obj, opt, param_dist)
-
-
-if __name__ == "__main__":
-	main()
-
 classifiers = {"LogisticRegression": LogisticRegression(),
 					"KNN": KNeighborsClassifier(),
 					"BayesBernouilli": BernoulliNB(),
@@ -345,3 +308,40 @@ param_dist_dict = {"LogisticRegression": logistic_regression_params,
 				"RandomForest":random_forest_params,
 				"LinearRegression":linear_regression_params
 				}
+
+
+def main():
+	'''Some basic setup for prediction'''
+	####### This part can be modified to fulfill different needs ######
+	data_path = '../MSPrediction-R/Data Scripts/data/predData.h5'
+	obj = 'fam2'
+	target = 'EnjoyLife'
+	########## Can use raw_input instead as well#######################
+	X, y, featureNames = pred_prep(data_path, obj, target)
+	num_features = X.shape[1]
+	random_forest_params["max_features"] = range(1, num_features + 1)
+	# com_clf = raw_input("Compare classifiers? (Y/N) ")
+	com_clf = "Y"
+	if com_clf == "Y":
+		# com_clf_opt = raw_input ("With optimization? (Y/N)")
+		com_clf_opt = "Y"
+		com_clf_opt = (com_clf_opt == 'Y')
+		compare_clf(X, y, classifiers, obj, metric = 'roc', opt = com_clf_opt, n_iter=50, folds=10, times=10)
+	else:
+		clf, clfName = choose_clf(classifiers)
+		param_sweep = raw_input("Parameter Sweeping? (Y/N) ")
+		# param_sweep ="Y"
+		if param_sweep == "Y" or param_sweep == "y":
+			param, param_dist, metric = param_sweep_select(clf)
+			param_sweeping(clf, obj, X, y, param_dist, metric, param, clfName)
+		else:
+			print ("Your only choice now is to plot ROC and PR curves for "+clfName+" classifier")
+			# Asking whether to optimize
+			opt = raw_input("Optimization? (Y/N)")
+			opt = (opt== "Y" or opt == "y")
+			param_dist = param_dist_dict[clfName]
+			clf_plot(clf, X, y, clfName, obj, opt, param_dist)
+
+
+if __name__ == "__main__":
+	main()
