@@ -1,3 +1,4 @@
+
 import pylab as pl
 import h5py as hp
 import numpy as np
@@ -40,7 +41,7 @@ def testAlgo(clf, X, y, clfName, opt = False, param_dict = None, opt_metric = 'r
             y_true.append(y_true0)
     return y_pred, y_true
 
-# Evaluation pipeline: 
+# Evaluation pipeline:
 def fitAlgo(clf, Xtrain, Ytrain, opt = False, param_dict = None, opt_metric = 'roc_auc', n_iter = 5):
     '''Return the fitted classifier
     Keyword arguments:
@@ -51,8 +52,7 @@ def fitAlgo(clf, Xtrain, Ytrain, opt = False, param_dict = None, opt_metric = 'r
     opt_metric - - optimization metric
     opt - - whether to do optimization or not
     '''
-    if opt:
-    	assert(param_dict != None)
+    if opt & (param_dict != None):
         assert(map(lambda x: isinstance(param_dict[x],list), param_dict))
         rs = RandomizedSearchCV(estimator = clf, n_iter = n_iter,
                                 param_distributions = param_dict,
@@ -94,12 +94,12 @@ def pred_prep(data_path, obj, target):
 	y = y.view((np.float64, 1))
 	return X, y, featureNames
 
-def compare_clf(X, y, clfs, obj, metric = 'roc', opt = False):
+def compare_clf(X, y, clfs, obj, metric = 'roc', opt = False, n_iter=2, folds=2, times=2):
 	'''Compare classifiers with mean roc_auc'''
 	mean_everything= {}
 	for clfName in clfs.keys():
 		clf = clfs[clfName]
-		y_pred, y_true = testAlgo(clf, X, y, clfName, opt)
+		y_pred, y_true = testAlgo(clf, X, y, clfName, opt, clf, n_iter=n_iter, folds=folds, times=times)
 		# output results and plot folds
 		mean_fpr, mean_tpr, mean_auc = plot_roc(y_pred, y_true, clfName, obj, opt)
 		mean_everything[clfName] = [mean_fpr, mean_tpr, mean_auc]
@@ -121,7 +121,7 @@ def compare_clf(X, y, clfs, obj, metric = 'roc', opt = False):
 	else:
 		save_path = 'plots/'+obj+'/'+'clf_comparison_'+ metric +'_noopt.pdf'
 	fig.savefig(save_path)
-	pl.show()
+	# pl.show()
 
 def plot_roc(y_pred, y_true, clfName, obj, opt):
 	'''Plots the ROC Curve'''
@@ -130,6 +130,7 @@ def plot_roc(y_pred, y_true, clfName, obj, opt):
 	mean_tpr[-1] = 1.0
 	pl.plot([0, 1], [0, 1], '--', color=(0.7, 0.7, 0.7),lw=3,label='Random')
 	print("ROC AUC: %0.2f" % mean_auc)
+	print(clfName)
 	pl.plot(mean_fpr, mean_tpr, 'k--',
 							 label='Mean ROC (area = %0.2f)' % mean_auc, lw=2)
 	pl.xlim([0.0, 1.00])
@@ -144,7 +145,7 @@ def plot_roc(y_pred, y_true, clfName, obj, opt):
 	else:
 		save_path = 'plots/'+obj+'/'+clfName+'_roc_noopt.pdf'
 	fig.savefig(save_path)
-	pl.show()
+	# pl.show()
 	return mean_fpr, mean_tpr, mean_auc
 
 def plot_pr(y_pred, y_true,clfName, obj, opt):
@@ -194,7 +195,7 @@ def plot_unit_prep(y_pred, y_true, metric, plotfold = False):
 			else:
 				#precision-recall 'pr', y is prec, x is rec. rec is a decreasing array
 				y, x, thresholds = precision_recall_curve(true, pred)
-				# numpy.interp(x, xp, fp, left=None, right=None) 
+				# numpy.interp(x, xp, fp, left=None, right=None)
 				# xp must be increasing, so reverse x array, which means the corresponding y has to reverse order as well.
 				mean_y += np.interp(mean_x, x[::-1], y[::-1])
 		except ValueError:
@@ -255,7 +256,7 @@ def choose_clf(classifiers):
 	return clf, clfName
 
 
-if __name__ == "__main__":
+def main():
 	'''Some basic setup for prediction'''
 	####### This part can be modified to fulfill different needs ######
 	data_path = '../MSPrediction-R/Data Scripts/data/predData.h5'
@@ -264,58 +265,18 @@ if __name__ == "__main__":
 	########## Can use raw_input instead as well#######################
 	X, y, featureNames = pred_prep(data_path, obj, target)
 	num_features = X.shape[1]
-	classifiers = {"LogisticRegression": LogisticRegression(), 
-					"KNN": KNeighborsClassifier(),
-					"Bayes": BernoulliNB(),
-					"SVM": SVC(probability = True),
-					"RandomForest": RandomForestClassifier(),
-					"LinearRegression": LinearRegression()
-					}
-	# dictionaries of different classifiers, these can be eyeballed from my parameter sweeping curve
-	RFParamDist = {"n_estimators": range(25,30),
-				  "max_features": range(1, num_features + 1),
-				  "min_samples_split": range(1, 8),
-				  "min_samples_leaf": range(1, 8),
-				  "bootstrap": [True, False],
-				  "criterion": ["gini", "entropy"]}
-	# ['penalty', 'dual', 'tol', 'C', 'fit_intercept', 'intercept_scaling', 'class_weight', 'random_state']
-	logRegParamDist = {"penalty":['l1','l2'],
-						"C": np.linspace(.1, 1, 10),
-						"fit_intercept":[True, False],
-						"intercept_scaling":(.1, 1, 10),
-						"tol":[1e-2, 1e-3,1e-4, 1e-5]}
-	# ['n_neighbors', 'weights', 'algorithm', 'leaf_size', 'p', 'metric']
-	KNNParamDist = {"n_neighbors":range(5,7),
-					"algorithm":['auto', 'ball_tree', 'kd_tree', 'brute'],
-					"leaf_size":range(25,30),
-					"p":range(1,3)}
-	# ['alpha', 'binarize', 'fit_prior', 'class_prior']
-	BayesParamDist = {"alpha": np.linspace(.1, 1, 10),
-					"binarize": np.linspace(.1, 1, 10).tolist()}
-	# ['C', 'kernel', 'degree', 'gamma', 'coef0', 'shrinking', 'probability', 'tol', 'cache_size', 'class_weight', 'verbose', 'max_iter', 'random_state']
-	SVMParamDist = {"C": np.linspace(.1, 1, 10),
-					"kernel":['linear','poly','rbf'],
-					"shrinking":[True, False],
-					"tol":[1e-2, 1e-3,1e-4, 1e-5]}
-	# ['fit_intercept', 'normalize', 'copy_X']
-	LinRegParamDist = {"fit_intercept":[True, False],
-						"normalize": [True, False]}
-	# a dictionary storing the param_dist for different classifiers
-	param_dist_dict = {"LogisticRegression": logRegParamDist,
-					"KNN":KNNParamDist,
-					"Bayes":BayesParamDist,
-					"SVM":SVMParamDist,
-					"RandomForest":RFParamDist,
-					"LinearRegression":LinRegParamDist
-					}
-	com_clf = raw_input("Compare classifiers? (Y/N) ")
+	random_forest_params["max_features"] = range(1, num_features + 1)
+	# com_clf = raw_input("Compare classifiers? (Y/N) ")
+	com_clf = "Y"
 	if com_clf == "Y":
-		com_clf_opt = raw_input ("With optimization? (Y/N)")
+		# com_clf_opt = raw_input ("With optimization? (Y/N)")
+		com_clf_opt = "Y"
 		com_clf_opt = (com_clf_opt == 'Y')
-		compare_clf(X, y, classifiers, obj, metric = 'roc', opt = com_clf_opt)
+		compare_clf(X, y, classifiers, obj, metric = 'roc', opt = com_clf_opt, n_iter=50, folds=10, times=10)
 	else:
 		clf, clfName = choose_clf(classifiers)
 		param_sweep = raw_input("Parameter Sweeping? (Y/N) ")
+		# param_sweep ="Y"
 		if param_sweep == "Y" or param_sweep == "y":
 			param, param_dist, metric = param_sweep_select(clf)
 			param_sweeping(clf, obj, X, y, param_dist, metric, param, clfName)
@@ -326,3 +287,61 @@ if __name__ == "__main__":
 			opt = (opt== "Y" or opt == "y")
 			param_dist = param_dist_dict[clfName]
 			clf_plot(clf, X, y, clfName, obj, opt, param_dist)
+
+
+if __name__ == "__main__":
+	main()
+
+classifiers = {"LogisticRegression": LogisticRegression(),
+					"KNN": KNeighborsClassifier(),
+					"BayesBernouilli": BernoulliNB(),
+					"BayesMultinomial": MultinomialNB(),
+					"BayesGaussian": GaussianNB(),
+					"SVM": SVC(probability = True),
+					"RandomForest": RandomForestClassifier(),
+					"LinearRegression": LinearRegression()
+					}
+# dictionaries of different classifiers, these can be eyeballed from my parameter sweeping curve
+num_features = 4
+random_forest_params = {"n_estimators": range(25,30),
+			  "max_features": range(1, num_features + 1),
+			  "min_samples_split": range(1, 8),
+			  "min_samples_leaf": range(1, 8),
+			  "bootstrap": [True, False],
+			  "criterion": ["gini", "entropy"]}
+# ['penalty', 'dual', 'tol', 'C', 'fit_intercept', 'intercept_scaling', 'class_weight', 'random_state']
+logistic_regression_params = {"penalty":['l1','l2'],
+					"C": np.linspace(.1, 1, 10),
+					"fit_intercept":[True, False],
+					"intercept_scaling":(.1, 1, 10),
+					"tol":[1e-2, 1e-3,1e-4, 1e-5]}
+# ['n_neighbors', 'weights', 'algorithm', 'leaf_size', 'p', 'metric']
+knn_params= {"n_neighbors":range(5,7),
+				"algorithm":['auto', 'ball_tree', 'kd_tree', 'brute'],
+				"leaf_size":range(25,30),
+				"p":range(1,3)}
+# ['alpha', 'binarize', 'fit_prior', 'class_prior']
+bayesian_bernouilli_params= {"alpha": np.linspace(.1, 1, 10),
+				"binarize": np.linspace(.1, 1, 10).tolist()}
+# ['alpha', 'binarize', 'fit_prior', 'class_prior']
+bayesian_multi_params= {"alpha": np.linspace(.1, 1, 10)}
+# ['alpha', 'binarize', 'fit_prior', 'class_prior']
+bayesin_gaussian_params= None
+# ['C', 'kernel', 'degree', 'gamma', 'coef0', 'shrinking', 'probability', 'tol', 'cache_size', 'class_weight', 'verbose', 'max_iter', 'random_state']
+svm_params = {"C": np.linspace(.1, 1, 10),
+				"kernel":['linear','poly','rbf'],
+				"shrinking":[True, False],
+				"tol":[1e-2, 1e-3,1e-4, 1e-5]}
+# ['fit_intercept', 'normalize', 'copy_X']
+linear_regression_params = {"fit_intercept":[True, False],
+					"normalize": [True, False]}
+# a dictionary storing the param_dist for different classifiers
+param_dist_dict = {"LogisticRegression": logistic_regression_params,
+				"KNN":knn_params,
+				"BayesBernouilli": bayesian_bernouilli_params,
+				"BayesMultinomial": bayesian_multi_params,
+				"BayesGaussian": bayesin_gaussian_params,
+				"SVM":svm_params,
+				"RandomForest":random_forest_params,
+				"LinearRegression":linear_regression_params
+				}
