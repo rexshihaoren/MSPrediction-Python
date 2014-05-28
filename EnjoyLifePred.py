@@ -23,13 +23,14 @@ def testAlgo(clf, X, y, clfName, opt = False, param_dict = None, opt_metric = 'r
     y_pred = []
     if opt:
     	param_dict = param_dist_dict[clfName]
+    gs_score_list = []
     for i in range(0, times):
     	print str(i) +" iteration of testAlgo"
         rs = random.randint(1,1000)
         cv = KFold(len(y), n_folds = folds, shuffle = True, random_state = rs)
         for train_index, test_index in cv:
-            impr_clf  = fitAlgo(clf, X[train_index], y[train_index], opt, param_dict, opt_metric, n_iter)
-            print impr_clf
+            impr_clf, gs_score = fitAlgo(clf, X[train_index], y[train_index], opt, param_dict, opt_metric, n_iter)
+            gs_score_list += gs_score
             if (clfName != "LinearRegression"):
                 proba = impr_clf.predict_proba(X[test_index])
                 y_pred0 = proba[:,1]
@@ -39,7 +40,7 @@ def testAlgo(clf, X, y, clfName, opt = False, param_dict = None, opt_metric = 'r
             y_true0 = y[test_index]
             y_pred.append(y_pred0)
             y_true.append(y_true0)
-    return y_pred, y_true
+    return y_pred, y_true, gs_score_list
 
 # Evaluation pipeline:
 def fitAlgo(clf, Xtrain, Ytrain, opt = False, param_dict = None, opt_metric = 'roc_auc', n_iter = 5):
@@ -61,7 +62,7 @@ def fitAlgo(clf, Xtrain, Ytrain, opt = False, param_dict = None, opt_metric = 'r
                                 n_jobs=-1, cv = 3, verbose = 3)
 
         rs.fit(Xtrain, Ytrain)
-        return rs.best_estimator_
+        return rs.best_estimator_, rs.grid_scores_
     else:
         if param_dict != None:
             assert(map(lambda x: not isinstance(param_dict[x], list), param_dict))
@@ -256,6 +257,36 @@ def choose_clf(classifiers):
 	return clf, clfName
 
 
+def testGrid():
+	data_path = '../MSPrediction-R/Data Scripts/data/predData.h5'
+	obj = 'fam2'
+	target = 'EnjoyLife'
+	X, y, featureNames = pred_prep(data_path, obj, target)
+	num_features = X.shape[1]
+	random_forest_params["max_features"] = range(1, num_features + 1)
+	clfName = 'RandomForest'
+	opt_metric = 'roc'
+	clf = classifiers[clfName]
+	opt = True
+	param_dist = param_dist_dict[clfName]
+	y_pred, y_true, gs_score_list = testAlgo(clf, X, y, clfName,opt, param_dist)
+	saveGridPref(clfName, opt_metric, gs_score_list)
+	# return gs_score_list
+
+def saveGridPref(clfName, metric, grids):
+	# Transfer grids to list of numetuples to numpy structured array
+	grids2 = grids
+	fields = grids[0][0].keys()+list(grids[0]._fields)
+	fields.remove('parameters')
+	fields.remove('cv_validation_scores')
+	grids2 = map(lambda x: tuple(x[0].values()+[x[1]]),grids2)
+	datatype = [(fields[i], np.result_type(grids2[0][i]) if not isinstance(grids2[0][i], str) else '|S14') for i in range(0, len(fields))]
+	dataset = np.array(grids2, datatype)
+	f = hp.File('../MSPrediction-Python/data/'+clfName+'_grids_'+metric+'.h5', 'a')
+	dset = f.create_dataset(clfName, data = dataset)
+	f.close()
+
+
 def main():
 	'''Some basic setup for prediction'''
 	####### This part can be modified to fulfill different needs ######
@@ -272,7 +303,7 @@ def main():
 		# com_clf_opt = raw_input ("With optimization? (Y/N)")
 		com_clf_opt = "Y"
 		com_clf_opt = (com_clf_opt == 'Y')
-		compare_clf(X, y, classifiers, obj, metric = 'roc', opt = com_clf_opt, n_iter=50, folds=10, times=10)
+		compare_clf(X, y, classifiers, obj, metric = 'roc', opt = com_clf_opt, n_iter=5, folds=5, times=5)
 	else:
 		clf, clfName = choose_clf(classifiers)
 		param_sweep = raw_input("Parameter Sweeping? (Y/N) ")
