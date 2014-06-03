@@ -69,7 +69,7 @@ def fitAlgo(clf, Xtrain, Ytrain, opt = False, param_dict = None, opt_metric = 'r
             for k in param_dict.keys():
 	            clf.set_params(k = param_dict[k])
         clf.fit(Xtrain, Ytrain)
-        return clf
+        return clf, []
 
 # Meta-functions
 def clf_plot(clf, X, y, clfName, obj, opt, param_dist):
@@ -100,7 +100,9 @@ def compare_clf(X, y, clfs, obj, metric = 'roc', opt = False, n_iter=2, folds=2,
 	mean_everything= {}
 	for clfName in clfs.keys():
 		clf = clfs[clfName]
-		y_pred, y_true = testAlgo(clf, X, y, clfName, opt, clf, n_iter=n_iter, folds=folds, times=times)
+		y_pred, y_true, gs_score_list= testAlgo(clf, X, y, clfName, opt, clf, n_iter=n_iter, folds=folds, times=times)
+		if len(gs_score_list)>0:
+			saveGridPref(clfName, metric, gs_score_list)
 		# output results and plot folds
 		mean_fpr, mean_tpr, mean_auc = plot_roc(y_pred, y_true, clfName, obj, opt)
 		mean_everything[clfName] = [mean_fpr, mean_tpr, mean_auc]
@@ -356,7 +358,7 @@ def main():
 		# com_clf_opt = raw_input ("With optimization? (Y/N)")
 		com_clf_opt = "Y"
 		com_clf_opt = (com_clf_opt == 'Y')
-		compare_clf(X, y, classifiers, obj, metric = 'roc', opt = com_clf_opt, n_iter=50, folds=10, times=10)
+		compare_clf(X, y, classifiers, obj, metric = 'roc', opt = com_clf_opt, n_iter=2, folds=2, times=2)
 	else:
 		clf, clfName = choose_clf(classifiers)
 		param_sweep = raw_input("Parameter Sweeping? (Y/N) ")
