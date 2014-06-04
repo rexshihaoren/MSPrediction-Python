@@ -277,10 +277,10 @@ def testGrid():
 	opt = True
 	param_dist = param_dist_dict[clfName]
 	y_pred, y_true, gs_score_list = testAlgo(clf, X, y, clfName,opt, param_dist)
-	saveGridPref(clfName, opt_metric, gs_score_list)
+	saveGridPref(obj, clfName, opt_metric, gs_score_list)
 	# return gs_score_list
 
-def saveGridPref(clfName, metric, grids):
+def saveGridPref(obj, clfName, metric, grids):
 	# Transfer grids to list of numetuples to numpy structured array
 	grids2 = grids
 	# stds = map(lambda x: x.__repr__().split(',')[1], grids)
@@ -291,16 +291,15 @@ def saveGridPref(clfName, metric, grids):
 	grids2 = map(lambda x: tuple(x[0].values()+[x[2].mean(),x[2].std()]),grids2)
 	datatype = [(fields[i], np.result_type(grids2[0][i]) if not isinstance(grids2[0][i], str) else '|S14') for i in range(0, len(fields))]
 	dataset = np.array(grids2, datatype)
-	f = hp.File('../MSPrediction-Python/data/'+clfName+'_grids_'+metric+'.h5', 'a')
+	f = hp.File('../MSPrediction-Python/data/'+obj+'/'+clfName+'_grids_'+metric+'.h5', 'a')
 	dset = f.create_dataset(clfName, data = dataset)
 	f.close()
 
-def plotGridPrefTest(clfName, metric):
-	data_path = '../MSPrediction-Python/data/'+clfName+'_grids_'+metric+'.h5'
-	obj = clfName
+def plotGridPrefTest(obj, clfName, metric):
+	data_path = '../MSPrediction-Python/data/'+obj+'/'+clfName+'_grids_'+metric+'.h5'
 	target = 'EnjoyLife'
 	f=hp.File(data_path, 'r+')
-	dataset = f[obj].value
+	dataset = f[clfName].value
 	paramNames = dataset.dtype.fields.keys()
 	paramNames.remove("mean_validation_score")
 	paramNames.remove("std")
@@ -315,13 +314,6 @@ def plotGridPrefTest(clfName, metric):
 			if [True]* len(compound)== map(lambda t: np.issubdtype(t.dtype,  np.float) or np.issubdtype(t.dtype, np.int), compound):
 				gridsize = 200
 				fig = pl.figure()
-				# n = int(M.sqrt(len(x)))
-				# if n<3:
-				# 	k = 'linear'
-				# elif n < 5:
-				# 	k = 'cubic'
-				# else:
-				# 	k = 'nearest'
 				points = np.vstack([x,y]).T
 				xnew = np.linspace(max(x), min(x), gridsize)
 				ynew = np.linspace(max(y), min(y), gridsize)
@@ -329,19 +321,14 @@ def plotGridPrefTest(clfName, metric):
 				Z = griddata(points, score, (X, Y), method = "cubic")
 				z_min = min(score)
 				z_max = max(score)
-				# if 'bins=None', then color of each hexagon corresponds directly to its count
-				# 'C' is optional--it maps values to x-y coordinates; if 'C' is None (default) then 
-				# the result is a pure 2D histogram
 				pl.pcolormesh(X,Y,Z, cmap='RdBu', vmin=z_min, vmax=z_max)
 				pl.axis([x.min(), x.max(), y.min(), y.max()])
 				pl.xlabel(i, fontsize = 30)
 				pl.ylabel(j, fontsize = 30)
 				cb = pl.colorbar()
 				cb.set_label(metric, fontsize = 30)
-				save_path = 'plots/'+ str(gridsize)+'_'+clfName +'_' +metric+'_'+ i +'_'+ j+'.pdf'
+				save_path = '../MSPrediction-Python/plots/'+obj+'/'+ clfName +'_' +metric+'_'+ i +'_'+ j+'.pdf'
 				fig.savefig(save_path)
-				# pl.show() 
-	# return newdataset, score, std, paramNames
 
 
 classifiers = {"LogisticRegression": LogisticRegression(),
