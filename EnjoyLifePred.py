@@ -1,7 +1,9 @@
-
 import pylab as pl
 import h5py as hp
 import numpy as np
+import math as M
+import helper
+from scipy.interpolate import griddata
 from sklearn.cross_validation import StratifiedShuffleSplit, ShuffleSplit, StratifiedKFold, KFold
 from sklearn import metrics
 from sklearn.metrics import roc_curve, auc, average_precision_score, precision_recall_curve
@@ -11,13 +13,14 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
 from matplotlib.mlab import rec_drop_fields
+from matplotlib import cm
 import itertools
 from inspect import getargspec
 import random
 from sklearn.grid_search import RandomizedSearchCV
 
 # Testing Pipeline:
-def testAlgo(clf, X, y, clfName, opt = False, param_dict = None, opt_metric = 'roc_auc', n_iter = 2, folds = 2, times =  2):
+def testAlgo(clf, X, y, clfName, opt = False, param_dict = None, opt_metric = 'roc_auc', n_iter = 4, folds = 4, times =  4):
     '''An algorithm that output the perdicted y and real y'''
     y_true = []
     y_pred = []
@@ -82,7 +85,10 @@ def clf_plot(clf, X, y, clfName, obj, opt, param_dist):
 	# plot_pr(y_pred, y_true, clfName, ob, optj)
 
 def pred_prep(data_path, obj, target):
-	'''A generalized method that could return the desired X and y, based on the file path of the data, the name of the obj, and the target column we are trying to predict.'''
+	'''A generalized method that could return the desired X and y, based on the file path of the data, the name of the obj, and the target column we are trying to predict.
+	Keyword Arguments:
+		digitize: true or false
+	'''
 	f=hp.File(data_path, 'r+')
 	dataset = f[obj].value
 	# Convert Everything to float for easier calculation
@@ -277,15 +283,66 @@ def testGrid():
 def saveGridPref(clfName, metric, grids):
 	# Transfer grids to list of numetuples to numpy structured array
 	grids2 = grids
+	# stds = map(lambda x: x.__repr__().split(',')[1], grids)
 	fields = grids[0][0].keys()+list(grids[0]._fields)
 	fields.remove('parameters')
 	fields.remove('cv_validation_scores')
-	grids2 = map(lambda x: tuple(x[0].values()+[x[1]]),grids2)
+	fields.append('std')
+	grids2 = map(lambda x: tuple(x[0].values()+[x[2].mean(),x[2].std()]),grids2)
 	datatype = [(fields[i], np.result_type(grids2[0][i]) if not isinstance(grids2[0][i], str) else '|S14') for i in range(0, len(fields))]
 	dataset = np.array(grids2, datatype)
 	f = hp.File('../MSPrediction-Python/data/'+clfName+'_grids_'+metric+'.h5', 'a')
 	dset = f.create_dataset(clfName, data = dataset)
 	f.close()
+
+def plotGridPrefTest(clfName, metric):
+	data_path = '../MSPrediction-Python/data/'+clfName+'_grids_'+metric+'.h5'
+	obj = clfName
+	target = 'EnjoyLife'
+	f=hp.File(data_path, 'r+')
+	dataset = f[obj].value
+	paramNames = dataset.dtype.fields.keys()
+	paramNames.remove("mean_validation_score")
+	paramNames.remove("std")
+	score = dataset["mean_validation_score"]
+	std = dataset["std"]
+	newdataset = dataset[paramNames]
+	for i in paramNames:
+		x = newdataset[i]
+		for j in list(set(paramNames)- set([i])):
+			y = newdataset[j]
+			compound = [x,y]
+			if [True]* len(compound)== map(lambda t: np.issubdtype(t.dtype,  np.float) or np.issubdtype(t.dtype, np.int), compound):
+				gridsize = 200
+				fig = pl.figure()
+				# n = int(M.sqrt(len(x)))
+				# if n<3:
+				# 	k = 'linear'
+				# elif n < 5:
+				# 	k = 'cubic'
+				# else:
+				# 	k = 'nearest'
+				points = np.vstack([x,y]).T
+				xnew = np.linspace(max(x), min(x), gridsize)
+				ynew = np.linspace(max(y), min(y), gridsize)
+				X, Y = np.meshgrid(xnew, ynew)
+				Z = griddata(points, score, (X, Y), method = "cubic")
+				z_min = min(score)
+				z_max = max(score)
+				# if 'bins=None', then color of each hexagon corresponds directly to its count
+				# 'C' is optional--it maps values to x-y coordinates; if 'C' is None (default) then 
+				# the result is a pure 2D histogram
+				pl.pcolormesh(X,Y,Z, cmap='RdBu', vmin=z_min, vmax=z_max)
+				pl.axis([x.min(), x.max(), y.min(), y.max()])
+				pl.xlabel(i, fontsize = 30)
+				pl.ylabel(j, fontsize = 30)
+				cb = pl.colorbar()
+				cb.set_label(metric, fontsize = 30)
+				save_path = 'plots/'+ str(gridsize)+'_'+clfName +'_' +metric+'_'+ i +'_'+ j+'.pdf'
+				fig.savefig(save_path)
+				# pl.show() 
+	# return newdataset, score, std, paramNames
+
 
 classifiers = {"LogisticRegression": LogisticRegression(),
 					"KNN": KNeighborsClassifier(),
