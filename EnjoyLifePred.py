@@ -266,7 +266,7 @@ def choose_clf(classifiers):
 
 def testGrid():
 	data_path = '../MSPrediction-R/Data Scripts/data/predData.h5'
-	obj = 'fam2'
+	obj = 'fam2_bin'
 	target = 'EnjoyLife'
 	X, y, featureNames = pred_prep(data_path, obj, target)
 	num_features = X.shape[1]
@@ -390,7 +390,7 @@ def main():
 	'''Some basic setup for prediction'''
 	####### This part can be modified to fulfill different needs ######
 	data_path = '../MSPrediction-R/Data Scripts/data/predData.h5'
-	obj = 'fam2'
+	obj = 'fam2_bin'
 	target = 'EnjoyLife'
 	########## Can use raw_input instead as well#######################
 	X, y, featureNames = pred_prep(data_path, obj, target)
