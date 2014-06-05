@@ -108,7 +108,8 @@ def compare_clf(X, y, clfs, obj, metric = 'roc', opt = False, n_iter=2, folds=2,
 		clf = clfs[clfName]
 		y_pred, y_true, gs_score_list= testAlgo(clf, X, y, clfName, opt, clf, n_iter=n_iter, folds=folds, times=times)
 		if len(gs_score_list)>0:
-			saveGridPref(clfName, metric, gs_score_list)
+			saveGridPref(obj, clfName, metric, gs_score_list)
+			plotGridPrefTest(obj, clfName, metric)
 		# output results and plot folds
 		mean_fpr, mean_tpr, mean_auc = plot_roc(y_pred, y_true, clfName, obj, opt)
 		mean_everything[clfName] = [mean_fpr, mean_tpr, mean_auc]
@@ -417,6 +418,7 @@ def main():
 			opt = (opt== "Y" or opt == "y")
 			param_dist = param_dist_dict[clfName]
 			clf_plot(clf, X, y, clfName, obj, opt, param_dist)
+
 
 
 if __name__ == "__main__":
