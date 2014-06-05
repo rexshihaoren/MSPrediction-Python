@@ -58,7 +58,7 @@ def fitAlgo(clf, Xtrain, Ytrain, opt = False, param_dict = None, opt_metric = 'r
                                 param_distributions = param_dict,
                                 scoring = opt_metric,
                                 refit = True,
-                                n_jobs=-1, cv = 3, verbose = 3)
+                                n_jobs=4, cv = 10, verbose = 3)
 
         rs.fit(Xtrain, Ytrain)
         return rs.best_estimator_
@@ -314,7 +314,7 @@ def main():
 	'''Some basic setup for prediction'''
 	####### This part can be modified to fulfill different needs ######
 	data_path = '../MSPrediction-R/Data Scripts/data/predData.h5'
-	obj = 'fam2'
+	obj = 'modfam2' #'fam2'
 	target = 'EnjoyLife'
 	########## Can use raw_input instead as well#######################
 	X, y, featureNames = pred_prep(data_path, obj, target)
