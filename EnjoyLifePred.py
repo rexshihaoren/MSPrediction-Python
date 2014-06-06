@@ -390,7 +390,7 @@ param_dist_dict = {"LogisticRegression": logistic_regression_params,
 def main():
 	'''Some basic setup for prediction'''
 	####### This part can be modified to fulfill different needs ######
-	data_path = '../MSPrediction-R/Data Scripts/data/predData.h5'
+	data_path = './data/predData.h5'
 	obj = 'fam2_bin'
 	target = 'EnjoyLife'
 	########## Can use raw_input instead as well#######################
