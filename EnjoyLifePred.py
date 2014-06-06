@@ -292,7 +292,7 @@ def saveGridPref(obj, clfName, metric, grids):
 	grids2 = map(lambda x: tuple(x[0].values()+[x[2].mean(),x[2].std()]),grids2)
 	datatype = [(fields[i], np.result_type(grids2[0][i]) if not isinstance(grids2[0][i], str) else '|S14') for i in range(0, len(fields))]
 	dataset = np.array(grids2, datatype)
-	f = hp.File('../MSPrediction-Python/data/'+obj+'/'+clfName+'_grids_'+metric+'.h5', 'a')
+	f = hp.File('../MSPrediction-Python/data/'+obj+'/'+clfName+'_grids_'+metric+'.h5', 'w')
 	dset = f.create_dataset(clfName, data = dataset)
 	f.close()
 
