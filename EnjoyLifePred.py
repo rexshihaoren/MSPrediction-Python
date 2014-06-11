@@ -2,6 +2,7 @@ import pylab as pl
 import h5py as hp
 import numpy as np
 import math as M
+from termcolor import colored
 # import helper
 from scipy.interpolate import griddata
 from sklearn.cross_validation import StratifiedShuffleSplit, ShuffleSplit, StratifiedKFold, KFold
@@ -18,8 +19,8 @@ try:
     copyfile(scr, dst)
     print "Success!"
 except IOError as e:
-    print "USE SUDO PYTHON...!"
-    raise
+	print e
+	print colored("TIPS: use SUDO python...!", 'red')
 #######################################################
 from sklearn.naive_bayes import BernoulliNB, GaussianNB, MultinomialNB, PoissonNB
 from sklearn.linear_model import LogisticRegression, LinearRegression
