@@ -7,7 +7,14 @@ from scipy.interpolate import griddata
 from sklearn.cross_validation import StratifiedShuffleSplit, ShuffleSplit, StratifiedKFold, KFold
 from sklearn import metrics
 from sklearn.metrics import roc_curve, auc, average_precision_score, precision_recall_curve
+# import sklearn.naive_bayes
+# dst = sklearn.naive_bayes.__file__
+# scr = "./naive_bayes.py"
+# import shutil.copyfile as cpf
+# cpf(scr, dst)
+# reload(sklearn.naive_bayes)
 from sklearn.naive_bayes import BernoulliNB, GaussianNB, MultinomialNB, PoissonNB
+
 from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
@@ -77,7 +84,7 @@ def fitAlgo(clf, Xtrain, Ytrain, opt = False, param_dict = None, opt_metric = 'r
 # Meta-functions
 def clf_plot(clf, X, y, clfName, obj, opt, param_dist):
 	'''Plot experiment results'''
-	#Produce data for plotting
+	# Produce data for plotting
 	y_pred, y_true, gs_score_list = testAlgo(clf, X, y, clfName, opt, param_dist)
 	# Plotting auc_roc and precision_recall
 	plot_roc(y_pred, y_true, clfName, obj, opt)
@@ -101,12 +108,12 @@ def pred_prep(data_path, obj, target):
 	y = y.view((np.float64, 1))
 	return X, y, featureNames
 
-def compare_clf(X, y, clfs, obj, metric = 'roc', opt = False, n_iter=2, folds=2, times=2):
+def compare_clf(X, y, clfs, obj, metric = 'roc_auc', opt = False, n_iter=4, folds=4, times=4):
 	'''Compare classifiers with mean roc_auc'''
 	mean_everything= {}
 	for clfName in clfs.keys():
 		clf = clfs[clfName]
-		y_pred, y_true, gs_score_list= testAlgo(clf, X, y, clfName, opt, metric = metric, n_iter=n_iter, folds=folds, times=times)
+		y_pred, y_true, gs_score_list= testAlgo(clf, X, y, clfName, opt, opt_metric = metric, n_iter=n_iter, folds=folds, times=times)
 		if len(gs_score_list)>0:
 			saveGridPref(obj, clfName, metric, gs_score_list)
 			plotGridPrefTest(obj, clfName, metric)
@@ -136,7 +143,7 @@ def compare_clf(X, y, clfs, obj, metric = 'roc', opt = False, n_iter=2, folds=2,
 def plot_roc(y_pred, y_true, clfName, obj, opt):
 	'''Plots the ROC Curve'''
 	fig = pl.figure(figsize=(8,6),dpi=150)
-	mean_fpr, mean_tpr, mean_auc = plot_unit_prep(y_pred, y_true, 'roc', plotfold = True)
+	mean_fpr, mean_tpr, mean_auc = plot_unit_prep(y_pred, y_true, 'roc_auc', plotfold = True)
 	mean_tpr[-1] = 1.0
 	pl.plot([0, 1], [0, 1], '--', color=(0.7, 0.7, 0.7),lw=3,label='Random')
 	print("ROC AUC: %0.2f" % mean_auc)
@@ -195,11 +202,10 @@ def plot_unit_prep(y_pred, y_true, metric, plotfold = False):
 	for i, (pred,true) in enumerate(folds):
 		# pred & true represent each of the experiment folds
 		try:
-			if metric == 'roc':
+			if metric == 'roc_auc':
 				x, y, thresholds = roc_curve(true, pred)
 				roc_auc = auc(x, y)
 				if plotfold:
-					# pl.plot(x, y, lw=1, label='ROC fold %d (area = %0.2f)' % (i, roc_auc))
 					pl.plot(x, y, color='grey', alpha = 0.15, lw=1.2)
 				mean_y += np.interp(mean_x, x, y)
 			else:
@@ -273,7 +279,7 @@ def testGrid():
 	num_features = X.shape[1]
 	random_forest_params["max_features"] = range(1, num_features + 1)
 	clfName = 'RandomForest'
-	opt_metric = 'roc'
+	opt_metric = 'roc_auc'
 	clf = classifiers[clfName]
 	opt = True
 	param_dist = param_dist_dict[clfName]
@@ -299,7 +305,7 @@ def saveGridPref(obj, clfName, metric, grids):
 def plotGridPrefTest(obj, clfName, metric):
 	data_path = '../MSPrediction-Python/data/'+obj+'/'+clfName+'_grids_'+metric+'.h5'
 	target = 'EnjoyLife'
-	f=hp.File(data_path, 'r+')
+	f=hp.File(data_path, 'r')
 	dataset = f[clfName].value
 	paramNames = dataset.dtype.fields.keys()
 	paramNames.remove("mean_validation_score")
@@ -313,7 +319,7 @@ def plotGridPrefTest(obj, clfName, metric):
 			y = newdataset[j]
 			compound = [x,y]
 			if [True]* len(compound)== map(lambda t: np.issubdtype(t.dtype,  np.float) or np.issubdtype(t.dtype, np.int), compound):
-				gridsize = 200
+				gridsize = 50
 				fig = pl.figure()
 				points = np.vstack([x,y]).T
 				xnew = np.linspace(max(x), min(x), gridsize)
@@ -400,25 +406,26 @@ def main():
 	X, y, featureNames = pred_prep(data_path, obj, target)
 	num_features = X.shape[1]
 	random_forest_params["max_features"] = range(1, num_features + 1)
-	com_clf = raw_input("Compare classifiers? (Y/N) ")
-	# com_clf = "Y"
+	# com_clf = raw_input("Compare classifiers? (Y/N) ")
+	com_clf = "Y"
 	if com_clf == "Y":
-		com_clf_opt = raw_input ("With optimization? (Y/N)")
-		# com_clf_opt = "Y"
+		# com_clf_opt = raw_input ("With optimization? (Y/N)")
+		com_clf_opt = "Y"
 		com_clf_opt = (com_clf_opt == 'Y')
-		compare_clf(X, y, classifiers, obj, metric = 'roc', opt = com_clf_opt, n_iter=4, folds=4, times=4)
+		compare_clf(X, y, classifiers, obj, metric = 'roc_auc', opt = com_clf_opt, n_iter=4, folds=4, times=4)
 	else:
 		clf, clfName = choose_clf(classifiers)
-		param_sweep = raw_input("Parameter Sweeping? (Y/N) ")
-		# param_sweep ="Y"
+		# param_sweep = raw_input("Parameter Sweeping? (Y/N) ")
+		param_sweep ="Y"
 		if param_sweep == "Y" or param_sweep == "y":
 			param, param_dist, metric = param_sweep_select(clf)
 			param_sweeping(clf, obj, X, y, param_dist, metric, param, clfName)
 		else:
 			print ("Your only choice now is to plot ROC and PR curves for "+clfName+" classifier")
 			# Asking whether to optimize
-			opt = raw_input("Optimization? (Y/N)")
-			opt = (opt== "Y" or opt == "y")
+			# opt = raw_input("Optimization? (Y/N)"
+			# opt = (opt== "Y" or opt == "y")
+			opt = True
 			if opt:
 				param_dist = param_dist_dict[clfName]
 			else:

@@ -28,7 +28,7 @@ from .utils import array2d, atleast2d_or_csr, column_or_1d, check_arrays
 from .utils.extmath import safe_sparse_dot, logsumexp
 from .utils.multiclass import _check_partial_fit_first_call
 from .externals import six
-from scipy.misc import factorial as facto
+from scipy.misc import factorial
 
 
 __all__ = ['BernoulliNB', 'GaussianNB', 'MultinomialNB', 'PoissonNB']
@@ -250,7 +250,6 @@ class PoissonNB(BaseNB):
             L, R = Xi.shape
             for j in range(0, R):
                 # Estimate lambda
-                # lamb = MASS.fitdistr(Xi[:,j],"poisson")[0][0]
                 lamb = np.mean(Xi[:,j])
                 self.lamb_[i, j] = lamb
             self.class_prior_[i] = np.float(Xi.shape[0]) / n_samples
@@ -259,7 +258,7 @@ class PoissonNB(BaseNB):
     def _joint_log_likelihood(self, X):
         X = array2d(X)
         joint_log_likelihood = []
-        func = lambda lamb, x: x* np.log(lamb)- lamb - np.log(facto(x))
+        func = lambda lamb, x: x* np.log(lamb)- lamb - np.log(factorial(x))
         vecfunc = np.vectorize(func)
         for i in range(np.size(self.classes_)):
             jointi = np.log(self.class_prior_[i])
