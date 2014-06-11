@@ -16,7 +16,6 @@ are supervised learning methods based on applying Bayes' theorem with strong
 # License: BSD 3 clause
 
 from abc import ABCMeta, abstractmethod
-
 import numpy as np
 from scipy.sparse import issparse
 import warnings

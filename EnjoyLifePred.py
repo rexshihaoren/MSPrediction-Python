@@ -7,23 +7,29 @@ from scipy.interpolate import griddata
 from sklearn.cross_validation import StratifiedShuffleSplit, ShuffleSplit, StratifiedKFold, KFold
 from sklearn import metrics
 from sklearn.metrics import roc_curve, auc, average_precision_score, precision_recall_curve
-# import sklearn.naive_bayes
-# dst = sklearn.naive_bayes.__file__
-# scr = "./naive_bayes.py"
-# import shutil.copyfile as cpf
-# cpf(scr, dst)
-# reload(sklearn.naive_bayes)
+####### Modify your naive_bayes source code############
+import sklearn.naive_bayes as SNB
+fullpath = SNB.__file__
+path, filename = fullpath.rsplit('/', 1)
+dst = path+"/naive_bayes.py"
+scr = "./naive_bayes.py"
+from shutil import copyfile
+try:
+    copyfile(scr, dst)
+    print "Success!"
+except IOError as e:
+    print "USE SUDO PYTHON...!"
+    raise
+#######################################################
 from sklearn.naive_bayes import BernoulliNB, GaussianNB, MultinomialNB, PoissonNB
-
 from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
 from matplotlib.mlab import rec_drop_fields
 from matplotlib import cm
-import itertools
+# import itertools
 from inspect import getargspec
-import random
 from sklearn.grid_search import RandomizedSearchCV
 
 # Testing Pipeline:
@@ -36,7 +42,7 @@ def testAlgo(clf, X, y, clfName, opt = False, param_dict = None, opt_metric = 'r
     gs_score_list = []
     for i in range(0, times):
     	print str(i) +" iteration of testAlgo"
-        rs = random.randint(1,1000)
+        rs = np.random.randint(1,1000)
         cv = KFold(len(y), n_folds = folds, shuffle = True, random_state = rs)
         for train_index, test_index in cv:
             impr_clf, gs_score = fitAlgo(clf, X[train_index], y[train_index], opt, param_dict, opt_metric, n_iter)
@@ -398,21 +404,22 @@ param_dist_dict = {"LogisticRegression": logistic_regression_params,
 
 def main():
 	'''Some basic setup for prediction'''
-	####### This part can be modified to fulfill different needs ######
+	####### This part can be modified to fulfill different needs #####
 	data_path = './data/predData.h5'
 	obj = 'fam2_bin'
 	target = 'EnjoyLife'
-	########## Can use raw_input instead as well#######################
+	########## Can use raw_input instead as well######################
 	X, y, featureNames = pred_prep(data_path, obj, target)
 	num_features = X.shape[1]
 	random_forest_params["max_features"] = range(1, num_features + 1)
+	#########QUESTIONS################################################
 	# com_clf = raw_input("Compare classifiers? (Y/N) ")
 	com_clf = "Y"
 	if com_clf == "Y":
 		# com_clf_opt = raw_input ("With optimization? (Y/N)")
 		com_clf_opt = "Y"
 		com_clf_opt = (com_clf_opt == 'Y')
-		compare_clf(X, y, classifiers, obj, metric = 'roc_auc', opt = com_clf_opt, n_iter=4, folds=4, times=4)
+		compare_clf(X, y, classifiers, obj, metric = 'roc_auc', opt = com_clf_opt, n_iter=2, folds=2, times=2)
 	else:
 		clf, clfName = choose_clf(classifiers)
 		# param_sweep = raw_input("Parameter Sweeping? (Y/N) ")

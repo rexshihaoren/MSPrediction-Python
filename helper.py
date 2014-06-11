@@ -4,10 +4,9 @@ from scipy import interpolate
 from scipy.interpolate.interpnd import LinearNDInterpolator, NDInterpolatorBase, \
      CloughTocher2DInterpolator, _ndim_coords_from_arrays
 from scipy.spatial import cKDTree
-from scipy.misc import factorial as facto
+from scipy.misc import factorial
 from scipy.optimize import fmin, fmin_bfgs, fminbound
 import EnjoyLifePred as ELP
-# from sklearn.naive_bayes import PoissonNB
 from statsmodels.discrete.discrete_model import Poisson as pois
 from sklearn.naive_bayes import BernoulliNB, GaussianNB, MultinomialNB
 import os
@@ -17,9 +16,10 @@ MASS = importr('MASS')
 import rpy2.robjects.numpy2ri
 rpy2.robjects.numpy2ri.activate()
 
-__all__ = ['griddata', 'NearestNDInterpolator', 'LinearNDInterpolator',
-           'CloughTocher2DInterpolator']
+# __all__ = ['griddata', 'NearestNDInterpolator', 'LinearNDInterpolator',
+#            'CloughTocher2DInterpolator']
 def griddata(points, values, xi, method='linear', fill_value=np.nan, tol = 1e-6):
+    """modified griddata plus tol arg"""
     points = _ndim_coords_from_arrays(points)
 
     if points.ndim < 2:
@@ -54,8 +54,6 @@ def griddata(points, values, xi, method='linear', fill_value=np.nan, tol = 1e-6)
         raise ValueError("Unknown interpolation method %r for "
                          "%d dimensional data" % (method, ndim))
 
-
-
 def argmax(fucntion):
     """a function with only one variable, we out put the argmax"""
     x = fmin(- function)
@@ -71,7 +69,7 @@ def testargmax():
     # X, y, featureNames = ELP.pred_prep(data_path, obj, target)
     X = np.random.randint(5, size= (10,6))
     # loglike for Poisson
-    func = lambda lamb, x: x* np.log(lamb)- lamb - np.log(facto(x))
+    func = lambda lamb, x: x* np.log(lamb)- lamb - np.log(factorial(x))
     # func = lambda lamb, x: facto(x) - lamb + x
     vecfunc = np.vectorize(func)
     X = X.astype(int)
@@ -88,16 +86,5 @@ def testargmax():
             temp = funcadd(item, temp)
         negloglikecolsum[j] = temp
         lambopt = fmin(func = negloglikecolsum[j], xtol=0.0001, ftol=0.0001, x0 = 0.0)
-        # lambopt = fminbound(func = negloglikecolsum[j], x1 = 0.00, x2 = 5.00, xtol=0.001, maxfun = 100, disp = 2)
-        # la[:, j] = fmin(func = negloglikecolsum[j], xtol=0.0001, ftol=0.0001, x0 = 0.00, disp = True)
         la[:, j] = lambopt
-        # fmin_bfgs
-        # loglikecolsum[i] = lambda lamb: np.sum(loglikemat[:,i](lamb))
-    # initial guess for lamb
-
     return X, negloglikemat, negloglikecolsum, la
-    # optlamb = fmin(loglikecolsum, lambinit)
-
-
-def newTest():
-    
