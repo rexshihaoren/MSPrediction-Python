@@ -325,13 +325,16 @@ def plotGridPrefTest(obj, clfName, metric):
 		for j in list(set(paramNames)- set([i])):
 			y = newdataset[j]
 			compound = [x,y]
+			# Only plot heat map if dtype of all elements of x, y are int or float
 			if [True]* len(compound)== map(lambda t: np.issubdtype(t.dtype,  np.float) or np.issubdtype(t.dtype, np.int), compound):
 				gridsize = 50
 				fig = pl.figure()
 				points = np.vstack([x,y]).T
+				#####Construct MeshGrids##########
 				xnew = np.linspace(max(x), min(x), gridsize)
 				ynew = np.linspace(max(y), min(y), gridsize)
 				X, Y = np.meshgrid(xnew, ynew)
+				#####Interpolate Z on top of MeshGrids#######
 				Z = griddata(points, score, (X, Y), method = "cubic")
 				z_min = min(score)
 				z_max = max(score)
