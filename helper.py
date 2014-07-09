@@ -5,10 +5,11 @@ from scipy.interpolate.interpnd import LinearNDInterpolator, NDInterpolatorBase,
      CloughTocher2DInterpolator, _ndim_coords_from_arrays
 from scipy.spatial import cKDTree
 from scipy.misc import factorial
+from scipy.stats import chisquare, itemfreq
 from scipy.optimize import fmin, fmin_bfgs, fminbound
 import EnjoyLifePred as ELP
 from statsmodels.discrete.discrete_model import Poisson as pois
-from sklearn.naive_bayes import BernoulliNB, GaussianNB, MultinomialNB
+from sklearn.naive_bayes import BernoulliNB, GaussianNB, GaussianNB2, MultinomialNB, PoissonNB, MixNB
 import os
 os.environ['R_HOME'] = "/opt/local/Library/Frameworks/R.framework/Resources"
 from rpy2.robjects.packages import importr
@@ -88,3 +89,23 @@ def testargmax():
         lambopt = fmin(func = negloglikecolsum[j], xtol=0.0001, ftol=0.0001, x0 = 0.0)
         la[:, j] = lambopt
     return X, negloglikemat, negloglikecolsum, la
+
+
+def testMixNB():
+    data_path = '../MSPrediction-R/Data Scripts/data/predData.h5'
+    obj = 'fam2_bin'
+    target = 'EnjoyLife'
+    X, y, featureNames = ELP.pred_prep(data_path, obj, target)
+    clf = {}
+    clf0 = GaussianNB()
+    clf1 = GaussianNB2()
+    clf2 = PoissonNB()
+    clf3 = MixNB()
+    clf[0] = clf0
+    clf[1] = clf1
+    clf[2] = clf2
+    clf[3] = clf3
+    for k in clf.keys():
+        clf[k].fit(X,y)
+    return clf
+

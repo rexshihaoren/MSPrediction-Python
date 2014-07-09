@@ -20,9 +20,9 @@ try:
     print "Success!"
 except IOError as e:
 	print e
-	print colored("TIPS: use SUDO python...!", 'red')
+	print colored("TIPS: MUST HAVE ADMINISTRATOR PRIVILEGE...!", 'red')
 #######################################################
-from sklearn.naive_bayes import BernoulliNB, GaussianNB, MultinomialNB, PoissonNB
+from sklearn.naive_bayes import BernoulliNB, GaussianNB, GaussianNB2, MultinomialNB, PoissonNB, MixNB
 from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
@@ -89,10 +89,13 @@ def fitAlgo(clf, Xtrain, Ytrain, opt = False, param_dict = None, opt_metric = 'r
         return clf, []
 
 # Meta-functions
-def clf_plot(clf, X, y, clfName, obj, opt, param_dist):
+def clf_plot(clf, X, y, clfName, obj, opt, param_dist, metric = 'roc_auc'):
 	'''Plot experiment results'''
 	# Produce data for plotting
 	y_pred, y_true, gs_score_list = testAlgo(clf, X, y, clfName, opt, param_dist)
+	if len(gs_score_list)>0:
+		saveGridPref(obj, clfName, metric, gs_score_list)
+		plotGridPrefTest(obj, clfName, metric)
 	# Plotting auc_roc and precision_recall
 	plot_roc(y_pred, y_true, clfName, obj, opt)
 	# Plotting precision_recall
@@ -245,7 +248,7 @@ def param_sweeping(clf, obj, X, y, param_dist, metric, param, clfName):
 		y_pred = []
 		# new classifer each iteration
 		newclf = eval("clf.set_params("+ param + "= i)")
-		y_pred, y_true = testAlgo(newclf, X, y, clfName)
+		y_pred, y_true, gs_score_list = testAlgo(newclf, X, y, clfName)
 		mean_fpr, mean_tpr, mean_auc = plot_unit_prep(y_pred, y_true, metric)
 		scores.append(mean_auc)
 		print("Area under the ROC curve : %f" % mean_auc)
@@ -354,13 +357,15 @@ classifiers = {"LogisticRegression": LogisticRegression(),
 					"BayesMultinomial": MultinomialNB(),
 					"BayesGaussian": GaussianNB(),
 					"BayesPoisson": PoissonNB(),
+					"BayesGaussian2":GaussianNB2(),
 					"SVM": SVC(probability = True),
 					"RandomForest": RandomForestClassifier(),
-					"LinearRegression": LinearRegression()
+					"LinearRegression": LinearRegression(),
+					"BayesMixed": MixNB()
 					}
 # dictionaries of different classifiers, these can be eyeballed from my parameter sweeping curve
 num_features = 4
-random_forest_params = {"n_estimators": range(25,30),
+random_forest_params = {"n_estimators": range(25,100),
 			  "max_features": range(1, num_features + 1),
 			  "min_samples_split": range(1, 8),
 			  "min_samples_leaf": range(1, 8),
@@ -384,7 +389,10 @@ bayesian_bernouilli_params= {"alpha": np.linspace(.1, 1, 10),
 bayesian_multi_params= {"alpha": np.linspace(.1, 1, 10)}
 # ['alpha', 'binarize', 'fit_prior', 'class_prior']
 bayesian_gaussian_params= None
+bayesian_gaussian2_params= None
 bayesian_poisson_params = None
+bayesian_mixed_params = None
+
 # ['C', 'kernel', 'degree', 'gamma', 'coef0', 'shrinking', 'probability', 'tol', 'cache_size', 'class_weight', 'verbose', 'max_iter', 'random_state']
 svm_params = {"C": np.linspace(.1, 1, 10),
 				"kernel":['linear','poly','rbf'],
@@ -399,10 +407,12 @@ param_dist_dict = {"LogisticRegression": logistic_regression_params,
 				"BayesBernouilli": bayesian_bernouilli_params,
 				"BayesMultinomial": bayesian_multi_params,
 				"BayesGaussian": bayesian_gaussian_params,
+				"BayesGaussian2":bayesian_gaussian2_params,
 				"BayesPoisson": bayesian_poisson_params,
 				"SVM":svm_params,
 				"RandomForest":random_forest_params,
-				"LinearRegression":linear_regression_params
+				"LinearRegression":linear_regression_params,
+				"BayesMixed": bayesian_mixed_params
 				}
 
 
@@ -414,29 +424,30 @@ def main():
 	target = 'EnjoyLife'
 	########## Can use raw_input instead as well######################
 	X, y, featureNames = pred_prep(data_path, obj, target)
+	global num_features
 	num_features = X.shape[1]
 	random_forest_params["max_features"] = range(1, num_features + 1)
 	#########QUESTIONS################################################
-	# com_clf = raw_input("Compare classifiers? (Y/N) ")
-	com_clf = "Y"
+	com_clf = raw_input("Compare classifiers? (Y/N) ")
+	# com_clf = "Y"
 	if com_clf == "Y":
-		# com_clf_opt = raw_input ("With optimization? (Y/N)")
-		com_clf_opt = "Y"
+		com_clf_opt = raw_input ("With optimization? (Y/N)")
+		# com_clf_opt = "Y"
 		com_clf_opt = (com_clf_opt == 'Y')
-		compare_clf(X, y, classifiers, obj, metric = 'roc_auc', opt = com_clf_opt, n_iter=2, folds=2, times=2)
+		compare_clf(X, y, classifiers, obj, metric = 'roc_auc', opt = com_clf_opt, n_iter=4, folds=4, times=4)
 	else:
 		clf, clfName = choose_clf(classifiers)
-		# param_sweep = raw_input("Parameter Sweeping? (Y/N) ")
-		param_sweep ="Y"
+		param_sweep = raw_input("Parameter Sweeping? (Y/N) ")
+		# param_sweep ="Y"
 		if param_sweep == "Y" or param_sweep == "y":
 			param, param_dist, metric = param_sweep_select(clf)
 			param_sweeping(clf, obj, X, y, param_dist, metric, param, clfName)
 		else:
 			print ("Your only choice now is to plot ROC and PR curves for "+clfName+" classifier")
 			# Asking whether to optimize
-			# opt = raw_input("Optimization? (Y/N)"
-			# opt = (opt== "Y" or opt == "y")
-			opt = True
+			opt = raw_input("Optimization? (Y/N)")
+			opt = (opt== "Y" or opt == "y")
+			# opt = True
 			if opt:
 				param_dist = param_dist_dict[clfName]
 			else:
