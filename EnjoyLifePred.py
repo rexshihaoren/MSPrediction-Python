@@ -32,6 +32,7 @@ from matplotlib import cm
 # import itertools
 from inspect import getargspec
 from sklearn.grid_search import RandomizedSearchCV
+import os
 
 # Testing Pipeline:
 def testAlgo(clf, X, y, clfName, opt = False, param_dict = None, opt_metric = 'roc_auc', n_iter = 10, folds = 10, times =  10):
@@ -99,13 +100,20 @@ def clf_plot(clf, X, y, clfName, obj, opt, param_dist, metric = 'roc_auc'):
 	# Plotting auc_roc and precision_recall
 	plot_roc(y_pred, y_true, clfName, obj, opt)
 	# Plotting precision_recall
-	# plot_pr(y_pred, y_true, clfName, ob, optj)
+	plot_pr(y_pred, y_true, clfName, obj, opt)
 
 def pred_prep(data_path, obj, target):
 	'''A generalized method that could return the desired X and y, based on the file path of the data, the name of the obj, and the target column we are trying to predict.
 	Keyword Arguments:
-		digitize: true or false
+		data_path: the data path
+		obj: name of the dataset
+		target: the target column name
 	'''
+	# Make sure "data/obj" and "plot/obj" exist
+	if not os.path.exists('data/'+obj):
+		os.makedirs('data/'+obj)
+	if not os.path.exists('plots/'+obj):
+		os.makedirs('plots/'+obj)
 	f=hp.File(data_path, 'r+')
 	dataset = f[obj].value
 	# Convert Everything to float for easier calculation
@@ -121,16 +129,20 @@ def pred_prep(data_path, obj, target):
 def compare_clf(X, y, clfs, obj, metric = 'roc_auc', opt = False, n_iter=4, folds=4, times=4):
 	'''Compare classifiers with mean roc_auc'''
 	mean_everything= {}
+	mean_everything1 = {}
 	for clfName in clfs.keys():
 		clf = clfs[clfName]
 		y_pred, y_true, gs_score_list= testAlgo(clf, X, y, clfName, opt, opt_metric = metric, n_iter=n_iter, folds=folds, times=times)
 		if len(gs_score_list)>0:
 			saveGridPref(obj, clfName, metric, gs_score_list)
 			plotGridPrefTest(obj, clfName, metric)
-		# output results and plot folds
+		# output roc results and plot folds
 		mean_fpr, mean_tpr, mean_auc = plot_roc(y_pred, y_true, clfName, obj, opt)
 		mean_everything[clfName] = [mean_fpr, mean_tpr, mean_auc]
-	# Compare mean score of all clfs
+		# out pr results and plot folds
+		mean_rec, mean_prec, mean_auc1 = plot_pr(y_pred, y_true, clfName, obj, opt)
+		mean_everything1[clfName] = [mean_rec, mean_prec, mean_auc1]
+	# Compare mean roc score of all clfs
 	fig = pl.figure(figsize=(8,6),dpi=150)
 	for clfName in  mean_everything:
 		[mean_fpr, mean_tpr, mean_auc] = mean_everything[clfName]
@@ -144,10 +156,28 @@ def compare_clf(X, y, clfs, obj, metric = 'roc_auc', opt = False, n_iter=4, fold
 	pl.legend(loc='lower right')
 	pl.tight_layout()
 	if opt:
-		save_path = 'plots/'+obj+'/'+'clf_comparison_'+ metric +'_opt.pdf'
+		save_path = 'plots/'+obj+'/'+'clf_comparison_'+ 'roc_auc' +'_opt.pdf'
 	else:
-		save_path = 'plots/'+obj+'/'+'clf_comparison_'+ metric +'_noopt.pdf'
+		save_path = 'plots/'+obj+'/'+'clf_comparison_'+ 'roc_auc' +'_noopt.pdf'
 	fig.savefig(save_path)
+	# Compare pr score of all clfs
+	fig1 = pl.figure(figsize=(8,6),dpi=150)
+	for clfName in  mean_everything1:
+		[mean_rec, mean_prec, mean_auc1] = mean_everything1[clfName]
+		pl.plot(mean_rec, mean_prec, lw=3, label = clfName + ' (area = %0.2f)' %mean_auc1)
+	pl.plot([0, 1], [0, 1], 'k--')
+	pl.xlim([0.0, 1.0])
+	pl.ylim([0.0, 1.0])
+	pl.xlabel('Recall',fontsize=30)
+	pl.ylabel('Precision',fontsize=30)
+	pl.title('Precision-Recall',fontsize=25)
+	pl.legend(loc='lower right')
+	pl.tight_layout()
+	if opt:
+		save_path = 'plots/'+obj+'/'+'clf_comparison_'+ 'pr' +'_opt.pdf'
+	else:
+		save_path = 'plots/'+obj+'/'+'clf_comparison_'+ 'pr' +'_noopt.pdf'
+	fig1.savefig(save_path)
 	# pl.show()
 
 def plot_roc(y_pred, y_true, clfName, obj, opt):
@@ -178,22 +208,23 @@ def plot_roc(y_pred, y_true, clfName, obj, opt):
 def plot_pr(y_pred, y_true,clfName, obj, opt):
 	'''Plot the Precision-Recall Curve'''
 	fig = pl.figure(figsize=(8,6),dpi=150)
-	mean_rec, mean_prec, mean_area = plot_unit_prep(y_pred, y_true, 'pr')
-	print("Precision Recall AUC: %0.2f" % mean_area)
+	mean_rec, mean_prec, mean_auc = plot_unit_prep(y_pred, y_true, 'pr')
+	print("Precision Recall AUC: %0.2f" % mean_auc)
 	pl.clf()
 	pl.plot(mean_rec, mean_prec, label='Precision-Recall curve')
 	pl.xlabel('Recall')
 	pl.ylabel('Precision')
 	pl.ylim([0.0, 1.05])
 	pl.xlim([0.0, 1.0])
-	pl.title('Precision-Recall: AUC=%0.2f' % mean_area)
+	pl.title('Precision-Recall: AUC=%0.2f' % mean_auc)
 	pl.legend(loc="lower left")
 	if opt:
 		save_path = 'plots/'+obj+'/'+clfName+'_pr_opt.pdf'
 	else:
 		save_path = 'plots/'+obj+'/'+clfName+'_pr_noopt.pdf'
 	fig.savefig(save_path)
-	pl.show()
+	# pl.show()
+	return mean_rec, mean_prec, mean_auc
 
 def plot_unit_prep(y_pred, y_true, metric, plotfold = False):
 	''' Prepare mean_x, mean_y array for classifier evaludation, from predicted y and real y.
@@ -203,7 +234,7 @@ def plot_unit_prep(y_pred, y_true, metric, plotfold = False):
 	metric - - the metric in use to evaludate classifier
 	plotfold - - whether to plot indiviudal fold or not'''
 	mean_y= 0.0
-	mean_x = np.linspace(0, 1, 100)
+	mean_x = np.linspace(0, 1, 1000)
 	if len(y_pred)==1:
 			print "y_pred length 1"
 			folds = zip([y_pred],[y_true])
@@ -296,6 +327,23 @@ def testGrid():
 	y_pred, y_true, gs_score_list = testAlgo(clf, X, y, clfName,opt, param_dist)
 	saveGridPref(obj, clfName, opt_metric, gs_score_list)
 	# return gs_score_list
+	# 
+
+def testDiagnoStatic():
+	"""sklearn's Naive Bayes couldn't handle missing value"""
+	data_path = '../MSPrediction-R/Data Scripts/data/predData.h5'
+	obj = 'diagnoeffstatic'
+	target = 'ModEDSS'
+	X, y, featureNames = pred_prep(data_path, obj, target)
+	clfName = 'BayesGaussian2'
+	opt_metric = 'roc_auc'
+	clf = classifiers[clfName]
+	opt = True
+	param_dist = None
+	clf_plot(clf, X, y, clfName, obj, opt, param_dist)
+
+
+
 
 def saveGridPref(obj, clfName, metric, grids):
 	# Transfer grids to list of numetuples to numpy structured array
