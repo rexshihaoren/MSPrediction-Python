@@ -17,7 +17,7 @@ scr = "./naive_bayes.py"
 from shutil import copyfile
 try:
     copyfile(scr, dst)
-    print "Success!"
+    print "Successfully installed customized naive_bayes!"
 except IOError as e:
 	print e
 	print colored("TIPS: MUST HAVE ADMINISTRATOR PRIVILEGE...!", 'red')
@@ -33,6 +33,7 @@ from matplotlib import cm
 from inspect import getargspec
 from sklearn.grid_search import RandomizedSearchCV
 import os
+import re
 
 # Testing Pipeline:
 def testAlgo(clf, X, y, clfName, opt = False, param_dict = None, opt_metric = 'roc_auc', n_iter = 10, folds = 10, times =  10):
@@ -131,6 +132,7 @@ def compare_clf(X, y, clfs, obj, metric = 'roc_auc', opt = False, n_iter=4, fold
 	mean_everything= {}
 	mean_everything1 = {}
 	for clfName in clfs.keys():
+		print clfName
 		clf = clfs[clfName]
 		y_pred, y_true, gs_score_list= testAlgo(clf, X, y, clfName, opt, opt_metric = metric, n_iter=n_iter, folds=folds, times=times)
 		if len(gs_score_list)>0:
@@ -331,15 +333,15 @@ def testGrid():
 
 def testDiagnoStatic():
 	"""sklearn's Naive Bayes couldn't handle missing value"""
-	data_path = '../MSPrediction-R/Data Scripts/data/predData.h5'
+	data_path = './data/predData.h5'
 	obj = 'diagnoeffstatic'
 	target = 'ModEDSS'
 	X, y, featureNames = pred_prep(data_path, obj, target)
-	clfName = 'BayesGaussian2'
+	clfName = "LogisticRegression"
 	opt_metric = 'roc_auc'
 	clf = classifiers[clfName]
 	opt = True
-	param_dist = None
+	param_dist = random_forest_params
 	clf_plot(clf, X, y, clfName, obj, opt, param_dist)
 
 
@@ -411,6 +413,17 @@ classifiers = {"LogisticRegression": LogisticRegression(),
 					"LinearRegression": LinearRegression(),
 					"BayesMixed": MixNB()
 					}
+
+classifiers1 = {"LogisticRegression": LogisticRegression(),
+					"KNN": KNeighborsClassifier(),
+					"BayesBernouilli": BernoulliNB(),
+					"BayesGaussian": GaussianNB(),
+					"BayesGaussian2":GaussianNB2(),
+					"SVM": SVC(probability = True),
+					"RandomForest": RandomForestClassifier(),
+					"LinearRegression": LinearRegression()
+					}
+
 # dictionaries of different classifiers, these can be eyeballed from my parameter sweeping curve
 num_features = 4
 random_forest_params = {"n_estimators": range(25,100),
@@ -468,8 +481,10 @@ def main():
 	'''Some basic setup for prediction'''
 	####### This part can be modified to fulfill different needs #####
 	data_path = './data/predData.h5'
-	obj = 'fam2_bin'
-	target = 'EnjoyLife'
+	# obj = 'fam2_bin'
+	# target = 'EnjoyLife'
+	obj = 'diagnoeffstatic'
+	target = 'ModEDSS'
 	########## Can use raw_input instead as well######################
 	X, y, featureNames = pred_prep(data_path, obj, target)
 	global num_features
@@ -482,7 +497,11 @@ def main():
 		com_clf_opt = raw_input ("With optimization? (Y/N)")
 		# com_clf_opt = "Y"
 		com_clf_opt = (com_clf_opt == 'Y')
-		compare_clf(X, y, classifiers, obj, metric = 'roc_auc', opt = com_clf_opt, n_iter=4, folds=4, times=4)
+		if re.match("^diagno",obj):
+			compare_clf(X, y, classifiers1, obj, metric = 'roc_auc', opt = com_clf_opt, n_iter=4, folds=4, times=4)
+		else:
+
+			compare_clf(X, y, classifiers, obj, metric = 'roc_auc', opt = com_clf_opt, n_iter=4, folds=4, times=4)
 	else:
 		clf, clfName = choose_clf(classifiers)
 		param_sweep = raw_input("Parameter Sweeping? (Y/N) ")
