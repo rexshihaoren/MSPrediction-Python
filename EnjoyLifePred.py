@@ -258,10 +258,15 @@ def plot_unit_prep(y_pred, y_true, metric, plotfold = False):
 				# xp must be increasing, so reverse x array, which means the corresponding y has to reverse order as well.
 				mean_y += np.interp(mean_x, x[::-1], y[::-1])
 		except ValueError:
+			print true, pred
 			print metric +" is currently not available"
 		# mean_y[0] = 0.0
+	mean_y
 	mean_y/= len(folds)
+	# print mean_x
+	# print mean_y
 	mean_area = auc(mean_x,mean_y)
+
 	return mean_x, mean_y, mean_area
 
 def param_sweeping(clf, obj, X, y, param_dist, metric, param, clfName):
@@ -337,11 +342,11 @@ def testDiagnoStatic():
 	obj = 'diagnoeffstatic'
 	target = 'ModEDSS'
 	X, y, featureNames = pred_prep(data_path, obj, target)
-	clfName = "LogisticRegression"
+	clfName = "BayesMultinomial"
 	opt_metric = 'roc_auc'
 	clf = classifiers[clfName]
-	opt = True
-	param_dist = random_forest_params
+	opt = False
+	param_dist = None
 	clf_plot(clf, X, y, clfName, obj, opt, param_dist)
 
 
@@ -498,6 +503,7 @@ def main():
 		# com_clf_opt = "Y"
 		com_clf_opt = (com_clf_opt == 'Y')
 		if re.match("^diagno",obj):
+			# Because ^diagno dataset have continous (No Poisson) and negative features (No Multimonial)
 			compare_clf(X, y, classifiers1, obj, metric = 'roc_auc', opt = com_clf_opt, n_iter=4, folds=4, times=4)
 		else:
 
