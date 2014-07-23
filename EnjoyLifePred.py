@@ -34,6 +34,7 @@ from inspect import getargspec
 from sklearn.grid_search import RandomizedSearchCV
 import os
 import re
+from sklearn import preprocessing
 
 # Testing Pipeline:
 def testAlgo(clf, X, y, clfName, opt = False, param_dict = None, opt_metric = 'roc_auc', n_iter = 50, folds = 10, times =  10):
@@ -124,6 +125,7 @@ def pred_prep(data_path, obj, target):
 	y = dataset[target]
 	newdataset = dataset[featureNames]
 	X = newdataset.view((np.float64, len(newdataset.dtype.names)))
+	X = preprocessing.scale(X)
 	y = y.view((np.float64, 1))
 	return X, y, featureNames
 
