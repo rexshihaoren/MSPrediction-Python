@@ -36,7 +36,7 @@ import os
 import re
 
 # Testing Pipeline:
-def testAlgo(clf, X, y, clfName, opt = False, param_dict = None, opt_metric = 'roc_auc', n_iter = 10, folds = 10, times =  10):
+def testAlgo(clf, X, y, clfName, opt = False, param_dict = None, opt_metric = 'roc_auc', n_iter = 50, folds = 10, times =  10):
     '''An algorithm that output the perdicted y and real y'''
     y_true = []
     y_pred = []
@@ -95,9 +95,9 @@ def clf_plot(clf, X, y, clfName, obj, opt, param_dist, metric = 'roc_auc'):
 	'''Plot experiment results'''
 	# Produce data for plotting
 	y_pred, y_true, gs_score_list = testAlgo(clf, X, y, clfName, opt, param_dist)
-	if len(gs_score_list)>0:
-		saveGridPref(obj, clfName, metric, gs_score_list)
-		plotGridPrefTest(obj, clfName, metric)
+	# if len(gs_score_list)>0:
+	# 	saveGridPref(obj, clfName, metric, gs_score_list)
+	# 	plotGridPrefTest(obj, clfName, metric)
 	# Plotting auc_roc and precision_recall
 	plot_roc(y_pred, y_true, clfName, obj, opt)
 	# Plotting precision_recall
@@ -339,14 +339,16 @@ def testGrid():
 def testDiagnoStatic():
 	"""sklearn's Naive Bayes couldn't handle missing value"""
 	data_path = './data/predData.h5'
-	obj = 'diagnoeffstatic'
+	# obj = 'fam2_bin'
+	# target = 'EnjoyLife'
+	obj = 'diagnostatic'
 	target = 'ModEDSS'
 	X, y, featureNames = pred_prep(data_path, obj, target)
-	clfName = "BayesMultinomial"
+	clfName = "LogisticRegression"
 	opt_metric = 'roc_auc'
 	clf = classifiers[clfName]
-	opt = False
-	param_dist = None
+	opt = True
+	param_dist = logistic_regression_params
 	clf_plot(clf, X, y, clfName, obj, opt, param_dist)
 
 
@@ -420,7 +422,6 @@ classifiers = {"LogisticRegression": LogisticRegression(),
 					}
 
 classifiers1 = {"LogisticRegression": LogisticRegression(),
-					"KNN": KNeighborsClassifier(),
 					"BayesBernouilli": BernoulliNB(),
 					"BayesGaussian": GaussianNB(),
 					"BayesGaussian2":GaussianNB2(),
@@ -433,8 +434,8 @@ classifiers1 = {"LogisticRegression": LogisticRegression(),
 num_features = 4
 random_forest_params = {"n_estimators": range(25,100),
 			  "max_features": range(1, num_features + 1),
-			  "min_samples_split": range(1, 8),
-			  "min_samples_leaf": range(1, 8),
+			  "min_samples_split": range(1, 20),
+			  "min_samples_leaf": range(1, 20),
 			  "bootstrap": [True, False],
 			  "criterion": ["gini", "entropy"]}
 # ['penalty', 'dual', 'tol', 'C', 'fit_intercept', 'intercept_scaling', 'class_weight', 'random_state']
@@ -444,7 +445,7 @@ logistic_regression_params = {"penalty":['l1','l2'],
 					"intercept_scaling":(.1, 1, 10),
 					"tol":[1e-2, 1e-3,1e-4, 1e-5]}
 # ['n_neighbors', 'weights', 'algorithm', 'leaf_size', 'p', 'metric']
-knn_params= {"n_neighbors":range(5,7),
+knn_params= {"n_neighbors":range(1,10),
 				"algorithm":['auto', 'ball_tree', 'kd_tree', 'brute'],
 				"leaf_size":range(25,30),
 				"p":range(1,3)}
@@ -488,7 +489,7 @@ def main():
 	data_path = './data/predData.h5'
 	# obj = 'fam2_bin'
 	# target = 'EnjoyLife'
-	obj = 'diagnoeffstatic'
+	obj = 'diagnostatic'
 	target = 'ModEDSS'
 	########## Can use raw_input instead as well######################
 	X, y, featureNames = pred_prep(data_path, obj, target)
