@@ -100,12 +100,7 @@ class BaseNB(six.with_metaclass(ABCMeta, BaseEstimator, ClassifierMixin)):
             order, as they appear in the attribute `classes_`.
         """
         probas = np.exp(self.predict_log_proba(X))
-        rowsum = np.sum(probas, axis = 1)
-        if np.array_equal(rowsum, np.ones(rowsum.shape[0])):
-            print "rowsum not 1"
-        else:
-            print "rowsums are 1"
-        return probas / rowsum.reshape(rowsum.shape[0],1)
+        return probas / np.sum(probas, axis = 1)
 
 
 class GaussianNB(BaseNB):
@@ -154,7 +149,7 @@ class GaussianNB(BaseNB):
             Returns self.
         """
 
-        X, y = check_arrays(X, y, sparse_format='dense')
+        # X, y = check_arrays(X, y, sparse_format='dense')
         y = column_or_1d(y, warn=True)
 
         n_samples, n_features = X.shape
@@ -234,7 +229,7 @@ class GaussianNB2(BaseNB):
             Returns self.
         """
 
-        X, y = check_arrays(X, y, sparse_format='dense')
+        # X, y = check_arrays(X, y, sparse_format='dense')
         y = column_or_1d(y, warn=True)
 
         n_samples, n_features = X.shape
@@ -259,7 +254,7 @@ class GaussianNB2(BaseNB):
         norm_func = lambda x, sigma, theta: 1 if np.isnan(x) else -np.log(sigma)- 0.5 * np.log(2 * np.pi) - 0.5 * ((x - theta)/sigma) ** 2
         # norm_func = lambda x, sigma, theta: -np.log(sigma)- 0.5 * np.log(2 * np.pi) - 0.5 * ((x - theta)/sigma) ** 2
         norm_func = np.vectorize(norm_func)
-        X = array2d(X)
+        #X = array2d(X)
         joint_log_likelihood = []
         for i in range(np.size(self.classes_)):
             jointi = np.log(self.class_prior_[i])
