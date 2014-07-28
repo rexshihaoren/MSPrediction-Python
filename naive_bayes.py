@@ -254,9 +254,8 @@ class GaussianNB2(BaseNB):
         return self
 
     def _joint_log_likelihood(self, X):
-
-
-        norm_func = lambda x, sigma, theta: 1 if np.isnan(x) else -np.log(sigma)- 0.5 * np.log(2 * np.pi) - 0.5 * ((x - theta)/sigma) ** 2
+        # Here sigma is Var not Std
+        norm_func = lambda x, sigma, theta: 1 if np.isnan(x) else -0.5 * np.log(2 * np.pi*sigma) - 0.5 * ((x - theta)**2/sigma) 
         # norm_func = lambda x, sigma, theta: -np.log(sigma)- 0.5 * np.log(2 * np.pi) - 0.5 * ((x - theta)/sigma) ** 2
         norm_func = np.vectorize(norm_func)
         X = array2d(X)
@@ -760,7 +759,8 @@ class MixNB(BaseNB):
     >>> print(clf.predict([[-0.8, -1]]))
     [1]
     """
-    norm_func = lambda x, sigma, theta: 1 if np.isnan(x) else -np.log(sigma)- 0.5 * np.log(2 * np.pi) - 0.5 * ((x - theta)/sigma) ** 2
+    # norm_func = lambda x, sigma, theta: 1 if np.isnan(x) else -np.log(sigma)- 0.5 * np.log(2 * np.pi) - 0.5 * ((x - theta)/sigma) ** 2
+    norm_func = lambda x, sigma, theta: 1 if np.isnan(x) else -0.5 * np.log(2 * np.pi*sigma) - 0.5 * ((x - theta)**2/sigma) 
     # if x is na
     # return 1
     # else 

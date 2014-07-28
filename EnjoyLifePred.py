@@ -35,22 +35,26 @@ from sklearn.grid_search import RandomizedSearchCV
 import os
 import re
 from sklearn import preprocessing
+import brewer2mpl
+paired = brewer2mpl.get_map('Paired', 'qualitative', 10).mpl_colors
 
 # Testing Pipeline:
-def testAlgo(clf, X, y, clfName, opt = False, param_dict = None, opt_metric = 'roc_auc', n_iter = 50, folds = 10, times =  10):
+def testAlgo(clf, X, y, clfName, opt = False, param_dict = None, opt_metric = 'roc_auc', n_iter = 4, folds = 4, times = 4):
     '''An algorithm that output the perdicted y and real y'''
     y_true = []
     y_pred = []
     if opt:
     	param_dict = param_dist_dict[clfName]
     gs_score_list = []
+    imp = []
     for i in range(0, times):
     	print str(i) +" iteration of testAlgo"
         rs = np.random.randint(1,1000)
         cv = KFold(len(y), n_folds = folds, shuffle = True, random_state = rs)
         for train_index, test_index in cv:
-            impr_clf, gs_score = fitAlgo(clf, X[train_index], y[train_index], opt, param_dict, opt_metric, n_iter)
+            impr_clf, gs_score, imp0 = fitAlgo(clf, X[train_index], y[train_index], opt, param_dict, opt_metric, n_iter)
             gs_score_list += gs_score
+            imp.append(imp0)
             if (clfName != "LinearRegression"):
                 proba = impr_clf.predict_proba(X[test_index])
                 y_pred0 = proba[:,1]
@@ -60,7 +64,7 @@ def testAlgo(clf, X, y, clfName, opt = False, param_dict = None, opt_metric = 'r
             y_true0 = y[test_index]
             y_pred.append(y_pred0)
             y_true.append(y_true0)
-    return y_pred, y_true, gs_score_list
+    return y_pred, y_true, gs_score_list, imp
 
 # Evaluation pipeline:
 def fitAlgo(clf, Xtrain, Ytrain, opt = False, param_dict = None, opt_metric = 'roc_auc', n_iter = 5):
@@ -82,20 +86,23 @@ def fitAlgo(clf, Xtrain, Ytrain, opt = False, param_dict = None, opt_metric = 'r
                                 n_jobs=-1, cv = 3, verbose = 3)
 
         rs.fit(Xtrain, Ytrain)
-        return rs.best_estimator_, rs.grid_scores_
+        imp = []
+        if clf.__class__.__name__ == "RandomForestClassifier":
+        	imp = rs.best_estimator_.feature_importances_
+        return rs.best_estimator_, rs.grid_scores_, imp
     else:
         if param_dict != None:
             assert(map(lambda x: not isinstance(param_dict[x], list), param_dict))
             for k in param_dict.keys():
 	            clf.set_params(k = param_dict[k])
         clf.fit(Xtrain, Ytrain)
-        return clf, []
+        return clf, [], []
 
 # Meta-functions
 def clf_plot(clf, X, y, clfName, obj, opt, param_dist, metric = 'roc_auc'):
 	'''Plot experiment results'''
 	# Produce data for plotting
-	y_pred, y_true, gs_score_list = testAlgo(clf, X, y, clfName, opt, param_dist)
+	y_pred, y_true, gs_score_list, imp = testAlgo(clf, X, y, clfName, opt, param_dist)
 	# if len(gs_score_list)>0:
 	# 	saveGridPref(obj, clfName, metric, gs_score_list)
 	# 	plotGridPrefTest(obj, clfName, metric)
@@ -103,6 +110,9 @@ def clf_plot(clf, X, y, clfName, obj, opt, param_dist, metric = 'roc_auc'):
 	plot_roc(y_pred, y_true, clfName, obj, opt)
 	# Plotting precision_recall
 	plot_pr(y_pred, y_true, clfName, obj, opt)
+	# Plotting feature_importances
+	if opt & (clfName == "RandomForest"):
+		plot_importances(imp,clfName, obj)
 
 def pred_prep(data_path, obj, target):
 	'''A generalized method that could return the desired X and y, based on the file path of the data, the name of the obj, and the target column we are trying to predict.
@@ -136,7 +146,7 @@ def compare_clf(X, y, clfs, obj, metric = 'roc_auc', opt = False, n_iter=4, fold
 	for clfName in clfs.keys():
 		print clfName
 		clf = clfs[clfName]
-		y_pred, y_true, gs_score_list= testAlgo(clf, X, y, clfName, opt, opt_metric = metric, n_iter=n_iter, folds=folds, times=times)
+		y_pred, y_true, gs_score_list, imp = testAlgo(clf, X, y, clfName, opt, opt_metric = metric, n_iter=n_iter, folds=folds, times=times)
 		if len(gs_score_list)>0:
 			saveGridPref(obj, clfName, metric, gs_score_list)
 			plotGridPrefTest(obj, clfName, metric)
@@ -230,6 +240,34 @@ def plot_pr(y_pred, y_true,clfName, obj, opt):
 	# pl.show()
 	return mean_rec, mean_prec, mean_auc
 
+def plot_importances(imp, clfName, obj):
+    imp=np.vstack(imp)
+    print imp
+    mean_importance = np.mean(imp,axis=0)
+    std_importance = np.std(imp,axis=0)
+    indices = np.argsort(mean_importance)[::-1]
+    print indices
+    print featureNames
+    featureList = []
+    # num_features = len(featureNames)
+    print("Feature ranking:")
+    for f in range(num_features):
+        featureList.append(featureNames[indices[f]])
+        print("%d. feature %s (%.2f)" % (f, featureNames[indices[f]], mean_importance[indices[f]]))
+    fig = pl.figure(figsize=(8,6),dpi=150)
+    pl.title("Feature importances",fontsize=30)
+    pl.bar(range(num_features), mean_importance[indices],
+            yerr = std_importance[indices], color=paired[0], align="center",
+            edgecolor=paired[0],ecolor=paired[1])
+    pl.xticks(range(num_features), featureList, size=15,rotation=90)
+    pl.ylabel("Importance",size=30)
+    pl.yticks(size=20)
+    pl.xlim([-1, num_features])
+    # fix_axes()
+    pl.tight_layout()
+    save_path = 'plots/'+obj+'/'+clfName+'_feature_importances.pdf'
+    fig.savefig(save_path)
+
 def plot_unit_prep(y_pred, y_true, metric, plotfold = False):
 	''' Prepare mean_x, mean_y array for classifier evaludation, from predicted y and real y.
 	Keyword arguments:
@@ -288,7 +326,7 @@ def param_sweeping(clf, obj, X, y, param_dist, metric, param, clfName):
 		y_pred = []
 		# new classifer each iteration
 		newclf = eval("clf.set_params("+ param + "= i)")
-		y_pred, y_true, gs_score_list = testAlgo(newclf, X, y, clfName)
+		y_pred, y_true, gs_score_list, amp = testAlgo(newclf, X, y, clfName)
 		mean_fpr, mean_tpr, mean_auc = plot_unit_prep(y_pred, y_true, metric)
 		scores.append(mean_auc)
 		print("Area under the ROC curve : %f" % mean_auc)
@@ -333,7 +371,7 @@ def testGrid():
 	clf = classifiers[clfName]
 	opt = True
 	param_dist = param_dist_dict[clfName]
-	y_pred, y_true, gs_score_list = testAlgo(clf, X, y, clfName,opt, param_dist)
+	y_pred, y_true, gs_score_list, amp = testAlgo(clf, X, y, clfName,opt, param_dist)
 	saveGridPref(obj, clfName, opt_metric, gs_score_list)
 	# return gs_score_list
 	# 
@@ -491,9 +529,10 @@ def main():
 	data_path = './data/predData.h5'
 	# obj = 'fam2_bin'
 	# target = 'EnjoyLife'
-	obj = 'diagnostatic'
+	obj = 'diagnotryget'
 	target = 'ModEDSS'
 	########## Can use raw_input instead as well######################
+	global featureNames
 	X, y, featureNames = pred_prep(data_path, obj, target)
 	global num_features
 	num_features = X.shape[1]
