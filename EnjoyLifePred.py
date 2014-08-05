@@ -36,6 +36,7 @@ import os
 import re
 from sklearn import preprocessing
 import brewer2mpl
+from scipy.stats import itemfreq
 paired = brewer2mpl.get_map('Paired', 'qualitative', 10).mpl_colors
 
 # Testing Pipeline:
@@ -392,7 +393,43 @@ def testDiagnoStatic():
 	clf_plot(clf, X, y, clfName, obj, opt, param_dist)
 
 
-
+def plotGaussian(X, y, obj, featureNames):
+	"""Plot Gausian fit on top of X.
+ 	Keyword arguments:
+ 		clf: a guassian bayers classifier
+	"""
+	save_path = '../MSPrediction-Python/plots/'+obj+'/'+'BayesGaussian2'
+	clf = classifiers["BayesGaussian2"]
+	clf.fit(X,y)
+	unique_y = np.unique(y)
+	theta = clf.theta_
+	sigma = clf.sigma_
+	class_prior = clf.class_prior_
+	norm_func = lambda x, sigma, theta: 1 if np.isnan(x) else -0.5 * np.log(2 * np.pi*sigma) - 0.5 * ((x - theta)**2/sigma) 
+	norm_func = np.vectorize(norm_func)
+	for j in range(X.shape[1]):
+		fcol = X[:,j]
+		jfeature = featureNames[j]
+		jpath = save_path +'_'+jfeature+'.pdf'
+		fig = pl.figure(figsize=(8,6),dpi=150)
+		for i, y_i in enumerate(unique_y):
+			fcoli = fcol[y == y_i]
+			itfreq = itemfreq(fcoli)
+			uniqueVars = itfreq[:,0]
+			freq = itfreq[:,1]
+			freq = freq/sum(freq)
+			the = theta[i, j]
+			sig = sigma[i,j]
+			pred = np.exp(norm_func(uniqueVars, sig, the))
+			pl.plot(uniqueVars, pred, label= str(y_i)+'_model')
+			pl.plot(uniqueVars, freq, label= str(y_i) +'_true')
+		pl.xlabel(jfeature)
+		pl.ylabel("density")
+		pl.legend(loc='best')
+		pl.tight_layout()
+		# pl.show()
+		fig.savefig(jpath)
+		
 
 def saveGridPref(obj, clfName, metric, grids):
 	# Transfer grids to list of numetuples to numpy structured array
@@ -538,6 +575,10 @@ def main():
 	num_features = X.shape[1]
 	random_forest_params["max_features"] = range(1, num_features + 1)
 	#########QUESTIONS################################################
+	plot_gaussian = raw_input("Plot Gaussian Fit? (Y/N)")
+	if plot_gaussian == "Y":
+		plotGaussian(X, y, obj, featureNames)
+
 	com_clf = raw_input("Compare classifiers? (Y/N) ")
 	# com_clf = "Y"
 	if com_clf == "Y":
