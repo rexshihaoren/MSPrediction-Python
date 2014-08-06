@@ -102,9 +102,9 @@ class BaseNB(six.with_metaclass(ABCMeta, BaseEstimator, ClassifierMixin)):
         probas = np.exp(self.predict_log_proba(X))
         rowsum = np.sum(probas, axis = 1)
         if np.array_equal(rowsum, np.ones(rowsum.shape[0])):
-            print "rowsum not 1"
+            print "rowsum are 1"
         else:
-            print "rowsums are 1"
+            print "rowsums are't 1"
         return probas / rowsum.reshape(rowsum.shape[0],1)
 
 
@@ -723,11 +723,11 @@ class PoissonNB(BaseNB):
     def _joint_log_likelihood(self, X):
         X = array2d(X)
         joint_log_likelihood = []
-        func = lambda lamb, x: x* np.log(lamb)- lamb - np.log(factorial(x))
+        func = lambda x, lamb: x* np.log(lamb)- lamb - np.log(factorial(x))
         vecfunc = np.vectorize(func)
         for i in range(np.size(self.classes_)):
             jointi = np.log(self.class_prior_[i])
-            n_ij = np.sum(vecfunc(self.lamb_[i,:].T, X), axis = 1)
+            n_ij = np.sum(vecfunc(X, self.lamb_[i,:]), axis = 1)
             joint_log_likelihood.append(jointi + n_ij)
         joint_log_likelihood = np.array(joint_log_likelihood).T
         return joint_log_likelihood
@@ -803,10 +803,14 @@ class MixNB(BaseNB):
         epsilon = 1e-9
         self.distnames = np.array(range(n_features), dtype = object)
         self.optmodels = np.zeros((n_classes, n_features), dtype = object)
+        num_samples = X.shape[0]
         for j in range(0, n_features):
             # Feature column
             fcol = X[:,j]
-            distname, _ = self._max_fit(fcol, y)
+            if sum(fcol>=0) != num_samples:
+                distname = 'norm'
+            else:
+                distname, _ = self._max_fit(fcol, y)
             self.distnames[j] = distname
             for i, y_i in enumerate(unique_y):
                 fcoli = fcol[y == y_i]
@@ -841,7 +845,7 @@ class MixNB(BaseNB):
             funcs[dis] = func
             # Use Chi-square to measure goodness
             goodness[dis] = self._get_goodness(func, fcol)
-        distname = max(goodness, key=goodness.get)
+        distname = min(goodness, key=goodness.get)
         optmodel = funcs[distname]
         return distname, optmodel
 
@@ -866,6 +870,7 @@ class MixNB(BaseNB):
         freq = itfreq[:,1]
         freq = freq/sum(freq)
         predFreq = np.exp(func(uniqueVars))
+        # predFreq = predFreq/sum(predFreq)
         goodness = chisquare(predFreq,freq)[0]
         return goodness
 
