@@ -22,7 +22,7 @@ except IOError as e:
 	print e
 	print colored("TIPS: MUST HAVE ADMINISTRATOR PRIVILEGE...!", 'red')
 #######################################################
-from sklearn.naive_bayes import BernoulliNB, GaussianNB, GaussianNB2, MultinomialNB, PoissonNB, MixNB
+from naive_bayes import BernoulliNB, GaussianNB, GaussianNB2, MultinomialNB, PoissonNB, MixNB
 from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
