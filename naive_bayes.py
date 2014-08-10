@@ -22,14 +22,14 @@ from scipy.sparse import issparse
 import warnings
 from scipy.misc import factorial
 from scipy.stats import chisquare, itemfreq
-from .base import BaseEstimator, ClassifierMixin
-from .preprocessing import binarize
-from .preprocessing import LabelBinarizer
-from .preprocessing import label_binarize
-from .utils import array2d, atleast2d_or_csr, column_or_1d, check_arrays
-from .utils.extmath import safe_sparse_dot, logsumexp
-from .utils.multiclass import _check_partial_fit_first_call
-from .externals import six
+from sklearn.base import BaseEstimator, ClassifierMixin
+from sklearn.preprocessing import binarize
+from sklearn.preprocessing import LabelBinarizer
+from sklearn.preprocessing import label_binarize
+from sklearn.utils import array2d, atleast2d_or_csr, column_or_1d, check_arrays
+from sklearn.utils.extmath import safe_sparse_dot, logsumexp
+from sklearn.utils.multiclass import _check_partial_fit_first_call
+from sklearn.externals import six
 
 __all__ = ['BernoulliNB', 'GaussianNB','GaussianNB2','MultinomialNB', 'PoissonNB', 'MixNB']
 

@@ -9,18 +9,18 @@ from sklearn.cross_validation import StratifiedShuffleSplit, ShuffleSplit, Strat
 from sklearn import metrics
 from sklearn.metrics import roc_curve, auc, average_precision_score, precision_recall_curve
 ####### Modify your naive_bayes source code############
-import sklearn.naive_bayes as SNB
-fullpath = SNB.__file__
-path, filename = fullpath.rsplit('/', 1)
-dst = path+"/naive_bayes.py"
-scr = "./naive_bayes.py"
-from shutil import copyfile
-try:
-    copyfile(scr, dst)
-    print "Successfully installed customized naive_bayes!"
-except IOError as e:
-	print e
-	print colored("TIPS: MUST HAVE ADMINISTRATOR PRIVILEGE...!", 'red')
+# import sklearn.naive_bayes as SNB
+# fullpath = SNB.__file__
+# path, filename = fullpath.rsplit('/', 1)
+# dst = path+"/naive_bayes.py"
+# scr = "./naive_bayes.py"
+# from shutil import copyfile
+# try:
+#     copyfile(scr, dst)
+#     print "Successfully installed customized naive_bayes!"
+# except IOError as e:
+# 	print e
+# 	print colored("TIPS: MUST HAVE ADMINISTRATOR PRIVILEGE...!", 'red')
 #######################################################
 from naive_bayes import BernoulliNB, GaussianNB, GaussianNB2, MultinomialNB, PoissonNB, MixNB
 from sklearn.linear_model import LogisticRegression, LinearRegression
@@ -600,7 +600,7 @@ def main():
 	data_path = './data/predData.h5'
 	# obj = 'fam2_bin'
 	# target = 'EnjoyLife'
-	obj = 'diagnostatic'
+	obj = 'diagnops'
 	target = 'ModEDSS'
 	########## Can use raw_input instead as well######################
 	global featureNames
