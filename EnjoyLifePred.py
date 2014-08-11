@@ -40,7 +40,7 @@ from scipy.stats import itemfreq
 paired = brewer2mpl.get_map('Paired', 'qualitative', 10).mpl_colors
 
 # Testing Pipeline:
-def testAlgo(clf, X, y, clfName, opt = False, param_dict = None, opt_metric = 'roc_auc', n_iter = 8, folds = 10, times = 10):
+def testAlgo(clf, X, y, clfName, opt = False, param_dict = None, opt_metric = 'roc_auc', n_iter = 10, folds = 10, times = 10):
     '''An algorithm that output the perdicted y and real y'''
     y_true = []
     y_pred = []
@@ -623,7 +623,7 @@ def main():
 		com_clf_opt = (com_clf_opt == 'Y')
 		if re.match("^diagno",obj):
 			# Because ^diagno dataset have continous (No Poisson) and negative features (No Multimonial)
-			compare_clf(X, y, classifiers1, obj, metric = 'roc_auc', opt = com_clf_opt, n_iter=4, folds=4, times=4)
+			compare_clf(X, y, classifiers1, obj, metric = 'roc_auc', opt = com_clf_opt, n_iter=10, folds=10, times=10)
 		else:
 
 			compare_clf(X, y, classifiers, obj, metric = 'roc_auc', opt = com_clf_opt, n_iter=4, folds=4, times=4)
