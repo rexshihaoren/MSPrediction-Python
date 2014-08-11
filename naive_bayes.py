@@ -101,10 +101,10 @@ class BaseNB(six.with_metaclass(ABCMeta, BaseEstimator, ClassifierMixin)):
         """
         probas = np.exp(self.predict_log_proba(X))
         rowsum = np.sum(probas, axis = 1)
-        if np.array_equal(rowsum, np.ones(rowsum.shape[0])):
-            print "rowsum are 1"
-        else:
-            print "rowsums are't 1"
+        # if np.array_equal(rowsum, np.ones(rowsum.shape[0])):
+        #     print "rowsum are 1"
+        # else:
+        #     print "rowsums are't 1"
         return probas / rowsum.reshape(rowsum.shape[0],1)
 
 
