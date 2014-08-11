@@ -40,7 +40,7 @@ from scipy.stats import itemfreq
 paired = brewer2mpl.get_map('Paired', 'qualitative', 10).mpl_colors
 
 # Testing Pipeline:
-def testAlgo(clf, X, y, clfName, opt = False, param_dict = None, opt_metric = 'roc_auc', n_iter = 4, folds = 4, times = 4):
+def testAlgo(clf, X, y, clfName, opt = False, param_dict = None, opt_metric = 'roc_auc', n_iter = 8, folds = 10, times = 10):
     '''An algorithm that output the perdicted y and real y'''
     y_true = []
     y_pred = []
@@ -553,7 +553,7 @@ logistic_regression_params = {"penalty":['l1','l2'],
 					"C": np.linspace(.1, 1, 10),
 					"fit_intercept":[True, False],
 					"intercept_scaling":(.1, 1, 10),
-					"tol":[1e-2, 1e-3,1e-4, 1e-5]}
+					"tol":[1e-4, 1e-5]}
 # ['n_neighbors', 'weights', 'algorithm', 'leaf_size', 'p', 'metric']
 knn_params= {"n_neighbors":range(1,10),
 				"algorithm":['auto', 'ball_tree', 'kd_tree', 'brute'],
