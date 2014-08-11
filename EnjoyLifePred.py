@@ -84,7 +84,7 @@ def fitAlgo(clf, Xtrain, Ytrain, opt = False, param_dict = None, opt_metric = 'r
                                 param_distributions = param_dict,
                                 scoring = opt_metric,
                                 refit = True,
-                                n_jobs=-1, cv = 3, verbose = 3)
+                                n_jobs=-1, cv = 3, verbose = 2)
 
         rs.fit(Xtrain, Ytrain)
         imp = []
@@ -535,7 +535,6 @@ classifiers1 = {"LogisticRegression": LogisticRegression(),
 					"BayesBernouilli": BernoulliNB(),
 					"BayesGaussian": GaussianNB(),
 					"BayesGaussian2":GaussianNB2(),
-					"SVM": SVC(probability = True),
 					"RandomForest": RandomForestClassifier(),
 					"LinearRegression": LinearRegression(),
 					"BayesMixed": MixNB()
@@ -575,7 +574,7 @@ bayesian_mixed_params = None
 svm_params = {"C": np.linspace(.1, 1, 10),
 				"kernel":['linear','poly','rbf'],
 				"shrinking":[True, False],
-				"tol":[1e-2, 1e-3,1e-4, 1e-5]}
+				"tol":[1e-3,1e-4]}
 # ['fit_intercept', 'normalize', 'copy_X']
 linear_regression_params = {"fit_intercept":[True, False],
 					"normalize": [True, False]}
