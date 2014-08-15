@@ -84,7 +84,7 @@ def fitAlgo(clf, Xtrain, Ytrain, opt = False, param_dict = None, opt_metric = 'r
                                 param_distributions = param_dict,
                                 scoring = opt_metric,
                                 refit = True,
-                                n_jobs=-1, cv = 3, verbose = 2)
+                                n_jobs=-1, cv = 3, verbose = 3)
 
         rs.fit(Xtrain, Ytrain)
         imp = []
@@ -490,9 +490,14 @@ def plotGridPrefTest(obj, clfName, metric):
 	score = dataset["mean_validation_score"]
 	std = dataset["std"]
 	newdataset = dataset[paramNames]
-	for i in paramNames:
+	# for i in paramNames:
+	num_params = len(paramNames)
+	for m in range(num_params-1):
+		i = paramNames[m]
 		x = newdataset[i]
-		for j in list(set(paramNames)- set([i])):
+		for n in range(m+1, num_params):
+		# for j in list(set(paramNames)- set([i])):
+			j = paramNames[n]
 			y = newdataset[j]
 			compound = [x,y]
 			# Only plot heat map if dtype of all elements of x, y are int or float
@@ -544,16 +549,16 @@ classifiers1 = {"LogisticRegression": LogisticRegression(),
 num_features = 4
 random_forest_params = {"n_estimators": range(25,100),
 			  "max_features": range(1, num_features + 1),
-			  "min_samples_split": range(1, 20),
-			  "min_samples_leaf": range(1, 20),
+			  "min_samples_split": range(1, 30),
+			  "min_samples_leaf": range(1, 30),
 			  "bootstrap": [True, False],
 			  "criterion": ["gini", "entropy"]}
 # ['penalty', 'dual', 'tol', 'C', 'fit_intercept', 'intercept_scaling', 'class_weight', 'random_state']
 logistic_regression_params = {"penalty":['l1','l2'],
 					"C": np.linspace(.1, 1, 10),
 					"fit_intercept":[True, False],
-					"intercept_scaling":(.1, 1, 10),
-					"tol":[1e-4, 1e-5]}
+					"intercept_scaling":np.linspace(.1, 1, 10), 
+					"tol":[1e-4, 1e-5, 1e-6]}
 # ['n_neighbors', 'weights', 'algorithm', 'leaf_size', 'p', 'metric']
 knn_params= {"n_neighbors":range(1,10),
 				"algorithm":['auto', 'ball_tree', 'kd_tree', 'brute'],
