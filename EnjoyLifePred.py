@@ -26,7 +26,8 @@ from naive_bayes import BernoulliNB, GaussianNB, GaussianNB2, MultinomialNB, Poi
 from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
-from sklearn.ensemble import RandomForestClassifier
+# from sklearn.ensemble import RandomForestClassifier
+from forest import RandomForestClassifier
 from matplotlib.mlab import rec_drop_fields
 from matplotlib import cm
 # import itertools
