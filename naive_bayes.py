@@ -234,7 +234,7 @@ class GaussianNB2(BaseNB):
             Returns self.
         """
 
-        X, y = check_arrays(X, y, sparse_format='dense')
+        #X, y = check_arrays(X, y, sparse_format='dense')
         y = column_or_1d(y, warn=True)
 
         n_samples, n_features = X.shape
@@ -792,7 +792,7 @@ class MixNB(BaseNB):
             Returns self.
         """
 
-        X, y = check_arrays(X, y, sparse_format='dense')
+        #X, y = check_arrays(X, y, sparse_format='dense')
         y = column_or_1d(y, warn=True)
 
         n_samples, n_features = X.shape
