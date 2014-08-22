@@ -248,8 +248,9 @@ class GaussianNB2(BaseNB):
         epsilon = 1e-9
         for i, y_i in enumerate(unique_y):
             Xi = X[y == y_i, :]
-            self.theta_[i, :] = np.mean(Xi, axis=0)
-            self.sigma_[i, :] = np.var(Xi, axis=0) + epsilon
+            # nanmean, nanvar both ignore na
+            self.theta_[i, :] = np.nanmean(Xi, axis=0)
+            self.sigma_[i, :] = np.nanvar(Xi, axis=0) + epsilon
             self.class_prior_[i] = np.float(Xi.shape[0]) / n_samples
         return self
 
@@ -258,7 +259,7 @@ class GaussianNB2(BaseNB):
         norm_func = lambda x, sigma, theta: 1 if np.isnan(x) else -0.5 * np.log(2 * np.pi*sigma) - 0.5 * ((x - theta)**2/sigma) 
         # norm_func = lambda x, sigma, theta: -np.log(sigma)- 0.5 * np.log(2 * np.pi) - 0.5 * ((x - theta)/sigma) ** 2
         norm_func = np.vectorize(norm_func)
-        X = array2d(X)
+        #X = array2d(X)
         joint_log_likelihood = []
         for i in range(np.size(self.classes_)):
             jointi = np.log(self.class_prior_[i])
@@ -721,7 +722,7 @@ class PoissonNB(BaseNB):
         return self
 
     def _joint_log_likelihood(self, X):
-        X = array2d(X)
+        #X = array2d(X)
         joint_log_likelihood = []
         func = lambda x, lamb: x* np.log(lamb)- lamb - np.log(factorial(x))
         vecfunc = np.vectorize(func)
@@ -900,7 +901,7 @@ class MixNB(BaseNB):
         return np.vectorize(func)
 
     def _joint_log_likelihood(self, X):
-        X = array2d(X)
+        #X = array2d(X)
         joint_log_likelihood = []
         for i in range(np.size(self.classes_)):
             jointi = np.log(self.class_prior_[i])

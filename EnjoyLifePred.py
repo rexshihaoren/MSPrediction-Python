@@ -604,7 +604,7 @@ def main():
 	data_path = './data/predData.h5'
 	# obj = 'fam2_bin'
 	# target = 'EnjoyLife'
-	obj = 'diagnoapnoNA'
+	obj = 'diagnoap'
 	target = 'ModEDSS'
 	########## Can use raw_input instead as well######################
 	global featureNames

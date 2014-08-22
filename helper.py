@@ -93,9 +93,12 @@ def testargmax():
 
 def testMixNB():
     data_path = '../MSPrediction-R/Data Scripts/data/predData.h5'
-    obj = 'fam2_bin'
-    target = 'EnjoyLife'
+    obj = 'diagnoap'
+    target = 'ModEDSS'
     X, y, featureNames = ELP.pred_prep(data_path, obj, target)
+    from naive_bayes import BernoulliNB, GaussianNB, GaussianNB2, MultinomialNB, PoissonNB, MixNB
+    clf = GaussianNB2()
+    clf.fit(X,y)
     clf = {}
     clf0 = GaussianNB()
     clf1 = GaussianNB2()
