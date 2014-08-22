@@ -767,7 +767,7 @@ class MixNB(BaseNB):
     # else 
     # return -np.log(sigma)- 0.5 * np.log(2 * np.pi) - 0.5 * ((x - theta)/sigma) ** 2
     norm_func = np.vectorize(norm_func)
-    pois_func = lambda x, lamb: x* np.log(lamb)- lamb - np.log(factorial(x))
+    pois_func = lambda x, lamb: 1 if np.isnan(x) else x* np.log(lamb)- lamb - np.log(factorial(x))
     pois_func = np.vectorize(pois_func)
 
     def __init__(self, models = ['norm', 'poisson'], funcs = {'norm': norm_func,'poisson': pois_func}):
@@ -892,11 +892,11 @@ class MixNB(BaseNB):
 
         """
         if dis == 'poisson':
-            lamb = np.mean(fcol, axis = 0)
+            lamb = np.nanmean(fcol, axis = 0)
             func = lambda x: self.funcs[dis](x, lamb)
         if dis ==   'norm':
-            sigma = np.var(fcol, axis=0)
-            theta = np.mean(fcol, axis = 0)
+            sigma = np.nanvar(fcol, axis=0)
+            theta = np.nanmean(fcol, axis = 0)
             func = lambda x: self.funcs[dis](x, sigma, theta)
         return np.vectorize(func)
 
