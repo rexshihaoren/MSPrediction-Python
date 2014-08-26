@@ -26,8 +26,7 @@ from naive_bayes import BernoulliNB, GaussianNB, GaussianNB2, MultinomialNB, Poi
 from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
-# from sklearn.ensemble import RandomForestClassifier
-from forest import RandomForestClassifier
+from sklearn.ensemble import RandomForestClassifier
 from matplotlib.mlab import rec_drop_fields
 from matplotlib import cm
 # import itertools
@@ -149,6 +148,8 @@ def compare_clf(X, y, clfs, obj, metric = 'roc_auc', opt = False, n_iter=4, fold
 		print clfName
 		clf = clfs[clfName]
 		y_pred, y_true, gs_score_list, imp = testAlgo(clf, X, y, clfName, opt, opt_metric = metric, n_iter=n_iter, folds=folds, times=times)
+		if opt & (clfName == "RandomForest"):
+			plot_importances(imp,clfName, obj)
 		if len(gs_score_list)>0:
 			saveGridPref(obj, clfName, metric, gs_score_list)
 			plotGridPrefTest(obj, clfName, metric)
@@ -308,7 +309,6 @@ def plot_unit_prep(y_pred, y_true, metric, plotfold = False):
 	# print mean_x
 	# print mean_y
 	mean_area = auc(mean_x,mean_y)
-
 	return mean_x, mean_y, mean_area
 
 def param_sweeping(clf, obj, X, y, param_dist, metric, param, clfName):
@@ -392,7 +392,6 @@ def testDiagnoStatic():
 	opt = True
 	param_dist = logistic_regression_params
 	clf_plot(clf, X, y, clfName, obj, opt, param_dist)
-
 
 def plotGaussian(X, y, obj, featureNames):
 	"""Plot Gausian fit on top of X.
@@ -526,7 +525,7 @@ def plotGridPrefTest(obj, clfName, metric):
 
 classifiers = {"LogisticRegression": LogisticRegression(),
 					"KNN": KNeighborsClassifier(),
-					"BayesBernouilli": BernoulliNB(),
+					"BayesBernoulli": BernoulliNB(),
 					"BayesMultinomial": MultinomialNB(),
 					"BayesGaussian": GaussianNB(),
 					"BayesPoisson": PoissonNB(),
@@ -538,7 +537,7 @@ classifiers = {"LogisticRegression": LogisticRegression(),
 					}
 
 classifiers1 = {"LogisticRegression": LogisticRegression(),
-					"BayesBernouilli": BernoulliNB(),
+					"BayesBernoulli": BernoulliNB(),
 					"BayesGaussian": GaussianNB(),
 					"BayesGaussian2":GaussianNB2(),
 					"RandomForest": RandomForestClassifier(),
@@ -561,13 +560,13 @@ logistic_regression_params = {"penalty":['l1','l2'],
 					"intercept_scaling":np.linspace(.1, 1, 10), 
 					"tol":[1e-4, 1e-5, 1e-6]}
 # ['n_neighbors', 'weights', 'algorithm', 'leaf_size', 'p', 'metric']
-knn_params= {"n_neighbors":range(1,10),
-				"algorithm":['auto', 'ball_tree', 'kd_tree', 'brute'],
+knn_params= {"n_neighbors":range(1,6),
+				"algorithm":['auto', 'ball_tree', 'kd_tree'],
 				"leaf_size":range(25,30),
 				"p":range(1,3)}
 # ['alpha', 'binarize', 'fit_prior', 'class_prior']
-bayesian_bernouilli_params= {"alpha": np.linspace(.1, 1, 10),
-				"binarize": np.linspace(.1, 1, 10).tolist()}
+bayesian_bernoulli_params= {"alpha": np.linspace(.1, 1, 10),
+				"binarize": np.linspace(.1, 1, 10)}
 # ['alpha', 'binarize', 'fit_prior', 'class_prior']
 bayesian_multi_params= {"alpha": np.linspace(.1, 1, 10)}
 # ['alpha', 'binarize', 'fit_prior', 'class_prior']
@@ -587,7 +586,7 @@ linear_regression_params = {"fit_intercept":[True, False],
 # a dictionary storing the param_dist for different classifiers
 param_dist_dict = {"LogisticRegression": logistic_regression_params,
 				"KNN":knn_params,
-				"BayesBernouilli": bayesian_bernouilli_params,
+				"BayesBernoulli": bayesian_bernoulli_params,
 				"BayesMultinomial": bayesian_multi_params,
 				"BayesGaussian": bayesian_gaussian_params,
 				"BayesGaussian2":bayesian_gaussian2_params,
@@ -603,9 +602,9 @@ def main():
 	'''Some basic setup for prediction'''
 	####### This part can be modified to fulfill different needs #####
 	data_path = './data/predData.h5'
-	# obj = 'fam2_bin'
+	# obj = 'modfam2_bin'
 	# target = 'EnjoyLife'
-	obj = 'diagnoap'
+	obj = 'diagnofinal'
 	target = 'ModEDSS'
 	########## Can use raw_input instead as well######################
 	global featureNames
