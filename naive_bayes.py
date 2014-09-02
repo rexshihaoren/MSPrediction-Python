@@ -797,6 +797,7 @@ class MixNB(BaseNB):
         y = column_or_1d(y, warn=True)
 
         n_samples, n_features = X.shape
+        self.n_samples = n_samples
         self.features_ = n_features
         self.classes_ = unique_y = np.unique(y)
         n_classes = unique_y.shape[0]
@@ -869,7 +870,8 @@ class MixNB(BaseNB):
         itfreq = itemfreq(fcol)
         uniqueVars = itfreq[:,0]
         freq = itfreq[:,1]
-        freq = freq/sum(freq)
+        #freq = freq/sum(freq)
+        freq = freq/self.n_samples
         predFreq = np.exp(func(uniqueVars))
         # predFreq = predFreq/sum(predFreq)
         goodness = chisquare(predFreq,freq)[0]
@@ -1054,7 +1056,8 @@ class MixNB2(BaseNB):
         itfreq = itemfreq(fcol)
         uniqueVars = itfreq[:,0]
         freq = itfreq[:,1]
-        freq = freq/sum(freq)
+        #freq = freq/sum(freq)
+        freq = freq/self.n_samples
         predFreq = np.exp(func(uniqueVars))
         # predFreq = predFreq/sum(predFreq)
         goodness = chisquare(predFreq,freq)[0]

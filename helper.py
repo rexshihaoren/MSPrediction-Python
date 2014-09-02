@@ -112,4 +112,34 @@ def testMixNB():
     for k in clf.keys():
         clf[k].fit(X,y)
     return clf
+def plotCoeff(X, y, obj, featureNames, whichReg):
+    """ Plot Regression's Coeff
+    """
+    clf = classifier[whichReg]
+    clf.fit(X,y)
+    coeff = clf.coef_
+    indices = np.argsort(coeff)[::-1]
+    print indices
+    print featureNames
+    featureList = []
+    # num_features = len(featureNames)
+    print("Feature ranking:")
+    for f in range(num_features):
+        featureList.append(featureNames[indices[f]])
+        print("%d. feature %s (%.2f)" % (f, featureNames[indices[f]], coeff[indices[f]]))
+    fig = pl.figure(figsize=(8,6),dpi=150)
+    pl.title("Feature importances",fontsize=30)
+    pl.bar(range(num_features), coeff[indices],
+            yerr = std_importance[indices], color=paired[0], align="center",
+            edgecolor=paired[0],ecolor=paired[1])
+    pl.xticks(range(num_features), featureList, size=15,rotation=90)
+    pl.ylabel("Importance",size=30)
+    pl.yticks(size=20)
+    pl.xlim([-1, num_features])
+    # fix_axes()
+    pl.tight_layout()
+    save_path = 'plots/'+obj+'/'+WhichReg+'_feature_importances.pdf'
+    fig.savefig(save_path)
+
+
 

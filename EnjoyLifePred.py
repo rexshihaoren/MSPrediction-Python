@@ -405,6 +405,7 @@ def plotGaussian(X, y, obj, featureNames):
 	class_prior = clf.class_prior_
 	norm_func = lambda x, sigma, theta: 1 if np.isnan(x) else -0.5 * np.log(2 * np.pi*sigma) - 0.5 * ((x - theta)**2/sigma) 
 	norm_func = np.vectorize(norm_func)
+	n_samples = X.shape[0]
 	for j in range(X.shape[1]):
 		fcol = X[:,j]
 		jfeature = featureNames[j]
@@ -415,7 +416,8 @@ def plotGaussian(X, y, obj, featureNames):
 			itfreq = itemfreq(fcoli)
 			uniqueVars = itfreq[:,0]
 			freq = itfreq[:,1]
-			freq = freq/sum(freq)
+			#freq = freq/sum(freq)
+			freq = freq/n_samples
 			the = theta[i, j]
 			sig = sigma[i,j]
 			pred = np.exp(norm_func(uniqueVars, sig, the))
@@ -437,6 +439,7 @@ def plotMixNB(X, y, obj, featureNames, whichMix):
 	unique_y = np.unique(y)
 	# norm_func = lambda x, sigma, theta: 1 if np.isnan(x) else -0.5 * np.log(2 * np.pi*sigma) - 0.5 * ((x - theta)**2/sigma) 
 	# norm_func = np.vectorize(norm_func)
+	n_samples = X.shape[0]
 	for j in range(X.shape[1]):
 		fcol = X[:,j]
 		optmodel = clf.optmodels[:,j]
@@ -449,7 +452,8 @@ def plotMixNB(X, y, obj, featureNames, whichMix):
 			itfreq = itemfreq(fcoli)
 			uniqueVars = itfreq[:,0]
 			freq = itfreq[:,1]
-			freq = freq/sum(freq)
+			#freq = freq/sum(freq)
+			freq = freq/n_samples
 			pred = np.exp(optmodel[i](uniqueVars))
 			# print pred
 			# print pred
@@ -462,6 +466,42 @@ def plotMixNB(X, y, obj, featureNames, whichMix):
 		pl.tight_layout()
 		# pl.show()
 		fig.savefig(jpath)
+
+def plotCoeff(X, y, obj, featureNames, whichReg):
+    """ Plot Regression's Coeff
+    """
+    clf = classifiers[whichReg]
+    clf.fit(X,y)
+    if whichReg == "LogisticRegression":
+    	coeff = np.absolute(clf.coef_[0])
+    else:
+    	coeff = np.absolute(clf.coef_)
+    print coeff
+    indices = np.argsort(coeff)[::-1]
+    print indices
+    print featureNames
+    featureList = []
+    # num_features = len(featureNames)
+    print("Feature ranking:")
+    for f in range(num_features):
+        featureList.append(featureNames[indices[f]])
+        print("%d. feature %s (%.2f)" % (f, featureNames[indices[f]], coeff[indices[f]]))
+    fig = pl.figure(figsize=(8,6),dpi=150)
+    pl.title("Feature importances",fontsize=30)
+    # pl.bar(range(num_features), coeff[indices],
+    #         yerr = std_importance[indices], color=paired[0], align="center",
+    #         edgecolor=paired[0],ecolor=paired[1])
+    pl.bar(range(num_features), coeff[indices], color=paired[0], align="center",
+            edgecolor=paired[0],ecolor=paired[1])
+    pl.xticks(range(num_features), featureList, size=15,rotation=90)
+    pl.ylabel("Importance",size=30)
+    pl.yticks(size=20)
+    pl.xlim([-1, num_features])
+    # fix_axes()
+    pl.tight_layout()
+    save_path = 'plots/'+obj+'/'+whichReg+'_feature_importances.pdf'
+    fig.savefig(save_path)
+
 
 
 def saveGridPref(obj, clfName, metric, grids):
@@ -624,6 +664,10 @@ def main():
 	if plot_MixNB == "Y":
 		whichMix = raw_input("MixNB or MixNB2? (BayesMixed/BayesMixed2)")
 		plotMixNB(X, y, obj, featureNames, whichMix)
+	reg_Imp = raw_input("Plot Regression's Importance? (Y/N)")
+	if reg_Imp == "Y":
+		whichReg = raw_input("LogisticRegression/LinearRegression? ")
+		plotCoeff(X, y, obj, featureNames, whichReg)
 
 	com_clf = raw_input("Compare classifiers? (Y/N) ")
 	# com_clf = "Y"
