@@ -22,7 +22,7 @@ from sklearn.metrics import roc_curve, auc, average_precision_score, precision_r
 # 	print e
 # 	print colored("TIPS: MUST HAVE ADMINISTRATOR PRIVILEGE...!", 'red')
 #######################################################
-from naive_bayes import BernoulliNB, GaussianNB, GaussianNB2, MultinomialNB, PoissonNB, MixNB
+from naive_bayes import BernoulliNB, GaussianNB, GaussianNB2, MultinomialNB, PoissonNB, MixNB, MixNB2
 from sklearn.linear_model import LogisticRegression, LinearRegression
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
@@ -428,11 +428,11 @@ def plotGaussian(X, y, obj, featureNames):
 		# pl.show()
 		fig.savefig(jpath)
 		
-def plotMixNB(X, y, obj, featureNames):
+def plotMixNB(X, y, obj, featureNames, whichMix):
 	"""Plot MixNB fit on top of X.
 	"""
-	save_path = '../MSPrediction-Python/plots/'+obj+'/'+'BayesMixed'
-	clf = classifiers["BayesMixed"]
+	save_path = '../MSPrediction-Python/plots/'+obj+'/'+whichMix
+	clf = classifiers[whichMix]
 	clf.fit(X,y)
 	unique_y = np.unique(y)
 	# norm_func = lambda x, sigma, theta: 1 if np.isnan(x) else -0.5 * np.log(2 * np.pi*sigma) - 0.5 * ((x - theta)**2/sigma) 
@@ -533,7 +533,8 @@ classifiers = {"LogisticRegression": LogisticRegression(),
 					"SVM": SVC(probability = True),
 					"RandomForest": RandomForestClassifier(),
 					"LinearRegression": LinearRegression(),
-					"BayesMixed": MixNB()
+					"BayesMixed": MixNB(),
+					"BayesMixed2": MixNB2()
 					}
 
 classifiers1 = {"LogisticRegression": LogisticRegression(),
@@ -542,7 +543,8 @@ classifiers1 = {"LogisticRegression": LogisticRegression(),
 					"BayesGaussian2":GaussianNB2(),
 					"RandomForest": RandomForestClassifier(),
 					"LinearRegression": LinearRegression(),
-					"BayesMixed": MixNB()
+					"BayesMixed": MixNB(),
+					"BayesMixed2": MixNB2()
 					}
 
 # dictionaries of different classifiers, these can be eyeballed from my parameter sweeping curve
@@ -574,6 +576,7 @@ bayesian_gaussian_params= None
 bayesian_gaussian2_params= None
 bayesian_poisson_params = None
 bayesian_mixed_params = None
+bayesian_mixed2_params = None
 
 # ['C', 'kernel', 'degree', 'gamma', 'coef0', 'shrinking', 'probability', 'tol', 'cache_size', 'class_weight', 'verbose', 'max_iter', 'random_state']
 svm_params = {"C": np.linspace(.1, 1, 10),
@@ -594,7 +597,8 @@ param_dist_dict = {"LogisticRegression": logistic_regression_params,
 				"SVM":svm_params,
 				"RandomForest":random_forest_params,
 				"LinearRegression":linear_regression_params,
-				"BayesMixed": bayesian_mixed_params
+				"BayesMixed": bayesian_mixed_params,
+				"BayesMixed2": bayesian_mixed2_params
 				}
 
 
@@ -618,7 +622,8 @@ def main():
 		plotGaussian(X, y, obj, featureNames)
 	plot_MixNB = raw_input("Plot MixNB Fit? (Y/N)")
 	if plot_MixNB == "Y":
-		plotMixNB(X, y, obj, featureNames)
+		whichMix = raw_input("MixNB or MixNB2? (BayesMixed/BayesMixed2)")
+		plotMixNB(X, y, obj, featureNames, whichMix)
 
 	com_clf = raw_input("Compare classifiers? (Y/N) ")
 	# com_clf = "Y"

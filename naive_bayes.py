@@ -31,7 +31,7 @@ from sklearn.utils.extmath import safe_sparse_dot, logsumexp
 from sklearn.utils.multiclass import _check_partial_fit_first_call
 from sklearn.externals import six
 
-__all__ = ['BernoulliNB', 'GaussianNB','GaussianNB2','MultinomialNB', 'PoissonNB', 'MixNB']
+__all__ = ['BernoulliNB', 'GaussianNB','GaussianNB2','MultinomialNB', 'PoissonNB', 'MixNB','MixNB2']
 
 
 class BaseNB(six.with_metaclass(ABCMeta, BaseEstimator, ClassifierMixin)):
@@ -891,6 +891,198 @@ class MixNB(BaseNB):
         function: fit model with feature as argument
 
         """
+        if dis == 'poisson':
+            lamb = np.nanmean(fcol, axis = 0)
+            func = lambda x: self.funcs[dis](x, lamb)
+        if dis ==   'norm':
+            sigma = np.nanvar(fcol, axis=0)
+            theta = np.nanmean(fcol, axis = 0)
+            func = lambda x: self.funcs[dis](x, sigma, theta)
+        return np.vectorize(func)
+
+    def _joint_log_likelihood(self, X):
+        #X = array2d(X)
+        joint_log_likelihood = []
+        for i in range(np.size(self.classes_)):
+            jointi = np.log(self.class_prior_[i])
+            n_ij = np.sum([self.optmodels[i, :][j](X[:,j]) for j in range(self.features_)],axis = 0)
+            # n_ij = np.sum(self.optmodels[i, :](X), axis = 1)
+            joint_log_likelihood.append(jointi + n_ij)
+        joint_log_likelihood = np.array(joint_log_likelihood).T
+        return joint_log_likelihood
+
+
+class MixNB2(BaseNB):
+    """
+    Mix Naive Bayes2 (MixNB)
+    Different features having different distributions: if a feature has less than 5 discrete values, use ratio of + - samples to characterize this feature; Other wise follow MixNB
+
+    Attributes
+    ----------
+    `class_prior_` : array, shape = [n_classes]
+        probability of each class.
+
+    `lamb_` : array, shape = [n_classes, n_features]
+        mean of each feature per class
+    `model_` : array, shape = [n_classes, ]
+        model class
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> X = np.array([[-1, -1], [-2, -1], [-3, -2], [1, 1], [2, 1], [3, 2]])
+    >>> Y = np.array([1, 1, 1, 2, 2, 2])
+    >>> from sklearn.naive_bayes import PossionNB
+    >>> clf = PoissonNB()
+    >>> clf.fit(X, Y)
+    PossionNB()
+    >>> print(clf.predict([[-0.8, -1]]))
+    [1]
+    """
+    # norm_func = lambda x, sigma, theta: 1 if np.isnan(x) else -np.log(sigma)- 0.5 * np.log(2 * np.pi) - 0.5 * ((x - theta)/sigma) ** 2
+    norm_func = lambda x, sigma, theta: 1 if np.isnan(x) else -0.5 * np.log(2 * np.pi*sigma) - 0.5 * ((x - theta)**2/sigma) 
+    # if x is na
+    # return 1
+    # else 
+    # return -np.log(sigma)- 0.5 * np.log(2 * np.pi) - 0.5 * ((x - theta)/sigma) ** 2
+    norm_func = np.vectorize(norm_func)
+    pois_func = lambda x, lamb: 1 if np.isnan(x) else x* np.log(lamb)- lamb - np.log(factorial(x))
+    pois_func = np.vectorize(pois_func)
+    # rat denotes the ratio between freq of + sample (or - sample), it's a dictionary, with different discrete values for a feature as keys
+    ratio_func = lambda x, rat: 1 if np.isnan(x) else np.log(rat[x])
+    ratio_func = np.vectorize(ratio_func)
+
+
+    def __init__(self, models = ['norm', 'poisson', 'ratio'], funcs = {'norm': norm_func,'poisson': pois_func, 'ratio': ratio_func}):
+        self.models = models
+        self.funcs = funcs
+
+    def fit(self, X, y):
+        """Fit Mix Naive Bayes according to X, y
+
+        Parameters
+        ----------
+        X : structured array-like, shape = [n_samples, n_features]
+            Training vectors, where n_samples is the number of samples
+            and n_features is the number of features. Each coloumn can
+            be accessed by column name.
+
+        y : array-like, shape = [n_samples]
+            Target values.
+
+        Returns
+        -------
+        self : object
+            Returns self.
+        """
+
+        #X, y = check_arrays(X, y, sparse_format='dense')
+        y = column_or_1d(y, warn=True)
+        n_samples, n_features = X.shape
+        self.n_samples = n_samples
+        self.features_ = n_features
+        self.classes_ = unique_y = np.unique(y)
+        n_classes = unique_y.shape[0]
+        self.class_prior_ = np.zeros(n_classes)
+        epsilon = 1e-9
+        self.distnames = np.array(range(n_features), dtype = object)
+        self.optmodels = np.zeros((n_classes, n_features), dtype = object)
+        num_samples = X.shape[0]
+        for j in range(0, n_features):
+            # Feature column
+            fcol = X[:,j]
+            if itemfreq(fcol).shape[0] <= 5:
+                distname = 'ratio'
+            elif sum(fcol>=0) != num_samples:
+                distname = 'norm'
+            else:
+                distname, _ = self._max_fit(fcol, y)
+            self.distnames[j] = distname
+            for i, y_i in enumerate(unique_y):
+                fcoli = fcol[y == y_i]
+                self.optmodels[i, j] = self._fit_model(fcoli, distname)
+                # This step seems redundant but I don't see any better place to put this
+                self.class_prior_[i] = np.float(fcoli.shape[0]) / n_samples
+        return self
+
+    def _max_fit(self, fcol, y):
+        """Determine the best fit for one feature column
+
+        Parameters
+        ----------
+        fcol: feature column
+
+
+        Returns
+        ----------
+
+        distname: optimal distribution name
+        optmodel: optimal distribution function with feature as argument
+
+        NOTE:
+
+        Works for Discrete Fit
+
+        """
+        goodness = {}
+        funcs = {}
+        for dis in ['norm','poisson']:
+            func = self._fit_model(fcol,dis)
+            funcs[dis] = func
+            # Use Chi-square to measure goodness
+            goodness[dis] = self._get_goodness(func, fcol)
+        distname = min(goodness, key=goodness.get)
+        optmodel = funcs[distname]
+        return distname, optmodel
+
+
+    def _get_goodness(self, func, fcol):
+        """Calculate the goodness with Pearson's chi-squared test
+
+        Parameters
+        ----------
+        func: fit function
+        fcol: feature column
+
+
+        Returns
+        ----------
+
+        goodness
+
+        """
+        itfreq = itemfreq(fcol)
+        uniqueVars = itfreq[:,0]
+        freq = itfreq[:,1]
+        freq = freq/sum(freq)
+        predFreq = np.exp(func(uniqueVars))
+        # predFreq = predFreq/sum(predFreq)
+        goodness = chisquare(predFreq,freq)[0]
+        return goodness
+
+
+    def _fit_model(self, fcol, dis):
+
+        """Determine the best fit for one feature column given distribution name
+
+        Parameters
+        ----------
+        fcol: feature column, array
+        dis: distribution name, String
+
+
+        Returns
+        ----------
+        function: fit model with feature as argument
+
+        """
+        if dis == 'ratio':
+            itfreq = itemfreq(fcol)
+            uniqueVars = itfreq[:,0]
+            freq = itfreq[:,1]
+            rat = freq/self.n_samples
+            rat = dict(zip(uniqueVars, rat.T))
+            func = lambda x: self. funcs[dis](x, rat)
         if dis == 'poisson':
             lamb = np.nanmean(fcol, axis = 0)
             func = lambda x: self.funcs[dis](x, lamb)
