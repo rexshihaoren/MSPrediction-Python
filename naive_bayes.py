@@ -951,7 +951,7 @@ class MixNB2(BaseNB):
     pois_func = lambda x, lamb: 1 if np.isnan(x) else x* np.log(lamb)- lamb - np.log(factorial(x))
     pois_func = np.vectorize(pois_func)
     # rat denotes the ratio between freq of + sample (or - sample), it's a dictionary, with different discrete values for a feature as keys
-    ratio_func = lambda x, rat: 1 if np.isnan(x) else np.log(rat[x])
+    ratio_func = lambda x, rat: 1 if np.isnan(x) or (x not in rat.keys())  else np.log(rat[x])
     ratio_func = np.vectorize(ratio_func)
 
 
