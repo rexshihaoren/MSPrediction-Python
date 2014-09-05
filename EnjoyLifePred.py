@@ -398,7 +398,7 @@ def plotGaussian(X, y, obj, featureNames):
 	"""
 	save_path = '../MSPrediction-Python/plots/'+obj+'/'+'BayesGaussian2'
 	clf = classifiers["BayesGaussian2"]
-    clf,[],[] = fitAlgo(clf, X,y, opt= True, param_dict = param_dist_dict["BayesGaussian2"])
+	clf,[],[] = fitAlgo(clf, X,y, opt= True, param_dict = param_dist_dict["BayesGaussian2"])
 	unique_y = np.unique(y)
 	theta = clf.theta_
 	sigma = clf.sigma_
@@ -434,7 +434,7 @@ def plotMixNB(X, y, obj, featureNames, whichMix):
 	"""
 	save_path = '../MSPrediction-Python/plots/'+obj+'/'+whichMix
 	clf = classifiers[whichMix]
-    clf,[],[] = fitAlgo(clf, X,y, opt= True, param_dict = param_dist_dict[whichMix])
+	clf,[],[] = fitAlgo(clf, X,y, opt= True, param_dict = param_dist_dict[whichMix])
 	unique_y = np.unique(y)
 	# norm_func = lambda x, sigma, theta: 1 if np.isnan(x) else -0.5 * np.log(2 * np.pi*sigma) - 0.5 * ((x - theta)**2/sigma) 
 	# norm_func = np.vectorize(norm_func)
