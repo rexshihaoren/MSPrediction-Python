@@ -398,7 +398,7 @@ def plotGaussian(X, y, obj, featureNames):
 	"""
 	save_path = '../MSPrediction-Python/plots/'+obj+'/'+'BayesGaussian2'
 	clf = classifiers["BayesGaussian2"]
-	clf.fit(X,y)
+    clf,[],[] = fitAlgo(clf, X,y, opt= True, param_dict = param_dist_dict["BayesGaussian2"])
 	unique_y = np.unique(y)
 	theta = clf.theta_
 	sigma = clf.sigma_
@@ -416,8 +416,7 @@ def plotGaussian(X, y, obj, featureNames):
 			itfreq = itemfreq(fcoli)
 			uniqueVars = itfreq[:,0]
 			freq = itfreq[:,1]
-			#freq = freq/sum(freq)
-			freq = freq/n_samples
+			freq = freq/sum(freq)
 			the = theta[i, j]
 			sig = sigma[i,j]
 			pred = np.exp(norm_func(uniqueVars, sig, the))
@@ -435,7 +434,7 @@ def plotMixNB(X, y, obj, featureNames, whichMix):
 	"""
 	save_path = '../MSPrediction-Python/plots/'+obj+'/'+whichMix
 	clf = classifiers[whichMix]
-	clf.fit(X,y)
+    clf,[],[] = fitAlgo(clf, X,y, opt= True, param_dict = param_dist_dict[whichMix])
 	unique_y = np.unique(y)
 	# norm_func = lambda x, sigma, theta: 1 if np.isnan(x) else -0.5 * np.log(2 * np.pi*sigma) - 0.5 * ((x - theta)**2/sigma) 
 	# norm_func = np.vectorize(norm_func)
@@ -452,8 +451,7 @@ def plotMixNB(X, y, obj, featureNames, whichMix):
 			itfreq = itemfreq(fcoli)
 			uniqueVars = itfreq[:,0]
 			freq = itfreq[:,1]
-			#freq = freq/sum(freq)
-			freq = freq/n_samples
+			freq = freq/sum(freq)
 			pred = np.exp(optmodel[i](uniqueVars))
 			# print pred
 			# print pred
@@ -471,7 +469,7 @@ def plotCoeff(X, y, obj, featureNames, whichReg):
     """ Plot Regression's Coeff
     """
     clf = classifiers[whichReg]
-    clf.fit(X,y)
+    clf,[],[] = fitAlgo(clf, X,y, opt= True, param_dict = param_dist_dict[whichReg])
     if whichReg == "LogisticRegression":
     	coeff = np.absolute(clf.coef_[0])
     else:

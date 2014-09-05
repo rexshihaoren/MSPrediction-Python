@@ -870,8 +870,7 @@ class MixNB(BaseNB):
         itfreq = itemfreq(fcol)
         uniqueVars = itfreq[:,0]
         freq = itfreq[:,1]
-        #freq = freq/sum(freq)
-        freq = freq/self.n_samples
+        freq = freq/sum(freq)
         predFreq = np.exp(func(uniqueVars))
         # predFreq = predFreq/sum(predFreq)
         goodness = chisquare(predFreq,freq)[0]
@@ -1056,8 +1055,7 @@ class MixNB2(BaseNB):
         itfreq = itemfreq(fcol)
         uniqueVars = itfreq[:,0]
         freq = itfreq[:,1]
-        #freq = freq/sum(freq)
-        freq = freq/self.n_samples
+        freq = freq/sum(freq)
         predFreq = np.exp(func(uniqueVars))
         # predFreq = predFreq/sum(predFreq)
         goodness = chisquare(predFreq,freq)[0]
@@ -1083,7 +1081,7 @@ class MixNB2(BaseNB):
             itfreq = itemfreq(fcol)
             uniqueVars = itfreq[:,0]
             freq = itfreq[:,1]
-            rat = freq/self.n_samples
+            rat = freq/sum(freq)
             rat = dict(zip(uniqueVars, rat.T))
             func = lambda x: self. funcs[dis](x, rat)
         if dis == 'poisson':
