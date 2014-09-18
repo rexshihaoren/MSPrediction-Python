@@ -644,15 +644,16 @@ def main():
 	'''Some basic setup for prediction'''
 	####### This part can be modified to fulfill different needs #####
 	data_path = './data/predData.h5'
-	# obj = 'modfam2_bin'
-	# target = 'EnjoyLife'
-	obj = 'diagno0final'
+	obj = 'EDSS'
 	target = 'ModEDSS'
 	########## Can use raw_input instead as well######################
 	global featureNames
 	X, y, featureNames = pred_prep(data_path, obj, target)
 	global num_features
-	num_features = X.shape[1]
+	try:
+		num_features = X.shape[1]
+	except IndexError:
+		num_features = 1
 	random_forest_params["max_features"] = range(1, num_features + 1)
 	#########QUESTIONS################################################
 	plot_gaussian = raw_input("Plot Gaussian2 Fit? (Y/N)")
@@ -673,12 +674,13 @@ def main():
 		com_clf_opt = raw_input ("With optimization? (Y/N)")
 		# com_clf_opt = "Y"
 		com_clf_opt = (com_clf_opt == 'Y')
-		if re.match("^diagno",obj):
-			# Because ^diagno dataset have continous (No Poisson) and negative features (No Multimonial)
-			compare_clf(X, y, classifiers1, obj, metric = 'roc_auc', opt = com_clf_opt, n_iter=50, folds=10, times=10)
-		else:
+		compare_clf(X, y, classifiers1, obj, metric = 'roc_auc', opt = com_clf_opt, n_iter=50, folds=10, times=10)
+		# if re.match("^diagno",obj):
+		# 	# Because ^diagno dataset have continous (No Poisson) and negative features (No Multimonial)
+		# 	compare_clf(X, y, classifiers1, obj, metric = 'roc_auc', opt = com_clf_opt, n_iter=50, folds=10, times=10)
+		# else:
 
-			compare_clf(X, y, classifiers, obj, metric = 'roc_auc', opt = com_clf_opt, n_iter=4, folds=4, times=4)
+		# 	compare_clf(X, y, classifiers, obj, metric = 'roc_auc', opt = com_clf_opt, n_iter=4, folds=4, times=4)
 	else:
 		clf, clfName = choose_clf(classifiers)
 		param_sweep = raw_input("Parameter Sweeping? (Y/N) ")
