@@ -112,7 +112,7 @@ def clf_plot(clf, X, y, clfName, obj, opt, param_dist, metric = 'roc_auc'):
 	# Plotting precision_recall
 	plot_pr(y_pred, y_true, clfName, obj, opt)
 	# Plotting feature_importances
-	if opt & (clfName == "RandomForest"):
+	if opt & (clfName == "RandomForest")& (X.shape[1] != 1):
 		plot_importances(imp,clfName, obj)
 
 def pred_prep(data_path, obj, target):
@@ -148,7 +148,7 @@ def compare_clf(X, y, clfs, obj, metric = 'roc_auc', opt = False, n_iter=4, fold
 		print clfName
 		clf = clfs[clfName]
 		y_pred, y_true, gs_score_list, imp = testAlgo(clf, X, y, clfName, opt, opt_metric = metric, n_iter=n_iter, folds=folds, times=times)
-		if opt & (clfName == "RandomForest"):
+		if (X.shape[1]!= 1) & opt & (clfName == "RandomForest"):
 			plot_importances(imp,clfName, obj)
 		if len(gs_score_list)>0:
 			saveGridPref(obj, clfName, metric, gs_score_list)
@@ -644,7 +644,7 @@ def main():
 	'''Some basic setup for prediction'''
 	####### This part can be modified to fulfill different needs #####
 	data_path = './data/predData.h5'
-	obj = 'EDSS'
+	obj = 'Core_Imp'
 	target = 'ModEDSS'
 	########## Can use raw_input instead as well######################
 	global featureNames
@@ -675,7 +675,7 @@ def main():
 		com_clf_opt = raw_input ("With optimization? (Y/N)")
 		# com_clf_opt = "Y"
 		com_clf_opt = (com_clf_opt == 'Y')
-		compare_clf(X, y, classifiers1, obj, metric = 'roc_auc', opt = com_clf_opt, n_iter=50, folds=10, times=10)
+		compare_clf(X, y, classifiers1, obj, metric = 'roc_auc', opt = com_clf_opt, n_iter=10, folds=10, times=10)
 		# if re.match("^diagno",obj):
 		# 	# Because ^diagno dataset have continous (No Poisson) and negative features (No Multimonial)
 		# 	compare_clf(X, y, classifiers1, obj, metric = 'roc_auc', opt = com_clf_opt, n_iter=50, folds=10, times=10)
