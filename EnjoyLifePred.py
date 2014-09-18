@@ -653,7 +653,8 @@ def main():
 	try:
 		num_features = X.shape[1]
 	except IndexError:
-		num_features = 1
+		X = X.reshape(X.shape[0], 1)
+		num_features = X.shape[1]
 	random_forest_params["max_features"] = range(1, num_features + 1)
 	#########QUESTIONS################################################
 	plot_gaussian = raw_input("Plot Gaussian2 Fit? (Y/N)")

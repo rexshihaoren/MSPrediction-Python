@@ -94,7 +94,7 @@ def testargmax():
 def testMixNB():
     import EnjoyLifePred as ELP
     data_path = '../MSPrediction-R/Data Scripts/data/predData.h5'
-    obj = 'diagnofinal'
+    obj = 'EDSS'
     target = 'ModEDSS'
     X, y, featureNames = ELP.pred_prep(data_path, obj, target)
     from naive_bayes import BernoulliNB, GaussianNB, GaussianNB2, MultinomialNB, PoissonNB, MixNB
