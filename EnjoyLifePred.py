@@ -150,9 +150,9 @@ def compare_clf(X, y, clfs, obj, metric = 'roc_auc', opt = False, n_iter=4, fold
 		y_pred, y_true, gs_score_list, imp = testAlgo(clf, X, y, clfName, opt, opt_metric = metric, n_iter=n_iter, folds=folds, times=times)
 		if (X.shape[1]!= 1) & opt & (clfName == "RandomForest"):
 			plot_importances(imp,clfName, obj)
-		if len(gs_score_list)>0:
-			saveGridPref(obj, clfName, metric, gs_score_list)
-			plotGridPrefTest(obj, clfName, metric)
+		# if len(gs_score_list)>0:
+		# 	saveGridPref(obj, clfName, metric, gs_score_list)
+		# 	plotGridPrefTest(obj, clfName, metric)
 		# output roc results and plot folds
 		mean_fpr, mean_tpr, mean_auc = plot_roc(y_pred, y_true, clfName, obj, opt)
 		mean_everything[clfName] = [mean_fpr, mean_tpr, mean_auc]
@@ -644,7 +644,7 @@ def main():
 	'''Some basic setup for prediction'''
 	####### This part can be modified to fulfill different needs #####
 	data_path = './data/predData.h5'
-	obj = 'CorewmodFam'
+	obj = 'CorewStatic_Imp'
 	target = 'ModEDSS'
 	########## Can use raw_input instead as well######################
 	global featureNames
