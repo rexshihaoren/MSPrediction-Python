@@ -644,7 +644,7 @@ def main():
 	'''Some basic setup for prediction'''
 	####### This part can be modified to fulfill different needs #####
 	data_path = './data/predData.h5'
-	obj = 'CorewStatic_Cut'
+	obj = 'CorewStaticwFam'
 	target = 'ModEDSS'
 	########## Can use raw_input instead as well######################
 	global featureNames
