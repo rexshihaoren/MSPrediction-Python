@@ -24,21 +24,21 @@ from scipy.stats import itemfreq
 paired = brewer2mpl.get_map('Paired', 'qualitative', 10).mpl_colors
 
 # Testing Pipeline:
-def testAlgo(clf, X, y, clfName, opt = False, param_dict = None, opt_metric = 'roc_auc', n_iter = 50, folds = 10, times = 10):
+def testAlgo(clf, X, y, clfName, opt = False, param_dict = None, opt_metric = 'roc_auc', n_iter = 5, folds = 10, times = 10):
     '''An algorithm that output the perdicted y and real y'''
     y_true = []
     y_pred = []
     if opt:
     	param_dict = param_dist_dict[clfName]
-    gs_score_list = []
+    grids_score = []
     imp = []
     for i in range(0, times):
     	print str(i) +" iteration of testAlgo"
         rs = np.random.randint(1,1000)
         cv = KFold(len(y), n_folds = folds, shuffle = True, random_state = rs)
         for train_index, test_index in cv:
-            impr_clf, gs_score, imp0 = fitAlgo(clf, X[train_index], y[train_index], opt, param_dict, opt_metric, n_iter)
-            gs_score_list += gs_score
+            impr_clf, grids_score0, imp0 = fitAlgo(clf, X[train_index], y[train_index], opt, param_dict, opt_metric, n_iter)
+            grids_score += grids_score0
             imp.append(imp0)
             if (clfName != "LinearRegression"):
                 proba = impr_clf.predict_proba(X[test_index])
@@ -49,7 +49,7 @@ def testAlgo(clf, X, y, clfName, opt = False, param_dict = None, opt_metric = 'r
             y_true0 = y[test_index]
             y_pred.append(y_pred0)
             y_true.append(y_true0)
-    return y_pred, y_true, gs_score_list, imp
+    return y_pred, y_true, grids_score, imp
 
 # Evaluation pipeline:
 def fitAlgo(clf, Xtrain, Ytrain, opt = False, param_dict = None, opt_metric = 'roc_auc', n_iter = 5):
@@ -100,6 +100,7 @@ def pred_prep(data_path, obj, target):
 		os.makedirs('plots/'+obj)
 	f=hp.File(data_path, 'r+')
 	dataset = f[obj].value
+	f.close()
 	# Convert Everything to float for easier calculation
 	dataset = dataset.astype([(k,float) for k in dataset.dtype.names])
 	featureNames = dataset.dtype.fields.keys()
@@ -113,8 +114,16 @@ def pred_prep(data_path, obj, target):
 
 ### Save data
 
+def fill_2d(X, fill = np.nan):
+	'''Function to fill list of array with a certain fill to make it a 2d_array with shape m X n, where m is the number of arrays in the list, n is the maxinum length of array in the list. 
+	'''
+	maxlen = max([len(x) for x in X])
+	newX = [np.append(x, np.array([fill] * (maxlen-len(x)))) for x in X]
+	return np.array(newX)
+
+
 def save_output(obj, X, y, opt = True):
-	'''Save Output (y_pred, y_true, gs_score_list, and imp) for this dataframe
+	'''Save Output (y_pred, y_true, grids_score, and imp) for this dataframe
     Keyword arguments:
     obj - - dataframe name
     X - - feature matrix
@@ -126,23 +135,33 @@ def save_output(obj, X, y, opt = True):
 		param_dist = param_dist_dict[clfName]
 		# grids = grid_score_list
 		y_pred, y_true, grids, imp = testAlgo(clf, X, y, clfName, opt, param_dist)
-		grids2 = grids
-		# stds = map(lambda x: x.__repr__().split(',')[1], grids)
-		fields = grids[0][0].keys()+list(grids[0]._fields)
-		fields.remove('parameters')
-		fields.remove('cv_validation_scores')
-		fields.append('std')
-		grids2 = map(lambda x: tuple(x[0].values()+[x[2].mean(),x[2].std()]),grids2)
-		datatype = [(fields[i], np.result_type(grids2[0][i]) if not isinstance(grids2[0][i], str) else '|S14') for i in range(0, len(fields))]
-		dataset = np.array(grids2, datatype)
+		y_pred = fill_2d(y_pred)
+		y_true = fill_2d(y_true)
+		# Only rearange format if grids is not []
+		if grids !=[]:
+			grids2 = grids
+			# stds = map(lambda x: x.__repr__().split(',')[1], grids)
+			fields = grids[0][0].keys()+list(grids[0]._fields)
+			fields.remove('parameters')
+			fields.remove('cv_validation_scores')
+			fields.append('std')
+			grids2 = map(lambda x: tuple(x[0].values()+[x[2].mean(),x[2].std()]),grids2)
+			datatype = [(fields[i], np.result_type(grids2[0][i]) if not isinstance(grids2[0][i], str) else '|S14') for i in range(0, len(fields))]
+			grids_score = np.array(grids2, datatype)
+		else:
+			grids_score = np.array([])
+		imp = np.array(imp)
 		if opt:
 			f = hp.File('./data/'+ obj + '/' + clfName + '_opt.h5', 'w')
 		else:
 			f = hp.File('./data/'+ obj + '/' + clfName + '_noopt.h5', 'w')
+		print("Saving output for " + clfName)
+		print y_true
 		f.create_dataset('y_true', data = y_true)
 		f.create_dataset('y_pred', data = y_pred)
-		f.create_dataset('grids_score', data = dataset)
+		f.create_dataset('grids_score', data = grids_score)
 		f.create_dataset('imp', data = imp)
+		f.close()
 
 ### Plot results
 
@@ -160,14 +179,18 @@ def compare_clf(clfs, obj, metric = 'roc_auc', opt = False, n_iter=4, folds=4, t
 			data_path1 = data_path + clfName + '_noopt.h5'
 		f = hp.File(data_path1, 'r')
 		y_pred = f['y_pred'].value
+		y_pred = map(lambda x: x[~np.isnan(x)], y_pred)
 		y_true = f['y_true'].value
-		gs_score_list = f['grids_score'].value
-		imp = f['imp'].value
+		y_true = map(lambda x: x[~np.isnan(x)], y_true)
+		grids_score = f['grids_score'].value
 		# Need to check imp's shape
-		if (imp.shape[1]!= 1) & opt & (clfName == "RandomForest"):
+		if opt & (clfName == "RandomForest"):
+			imp = f['imp'].value
 			plot_importances(imp,clfName, obj)
-		if len(gs_score_list)>0:
-			plotGridPrefTest(gs_score_list, clfName, metric)
+			f.close()
+		# Because if opt = Flase, grids_score should be []
+		if len(grids_score)>0:
+			plotGridPref(grids_score, clfName, metric, obj)
 		# output roc results and plot folds
 		mean_fpr, mean_tpr, mean_auc = plot_roc(y_pred, y_true, clfName, obj, opt)
 		mean_everything[clfName] = [mean_fpr, mean_tpr, mean_auc]
@@ -225,6 +248,7 @@ def clf_plot(obj, clfName, opt):
 	f=hp.File(data_path, 'r+')
 	y_pred = f['y_pred'].value
 	y_true = f['y_true'].value
+	f.close()
 	# Plotting auc_roc and precision_recall
 	plot_roc(y_pred, y_true, clfName, obj, opt)
 	# Plotting precision_recall
@@ -317,13 +341,12 @@ def plot_unit_prep(y_pred, y_true, metric, plotfold = False):
 	mean_area = auc(mean_x,mean_y)
 	return mean_x, mean_y, mean_area
 
-def plotGridPref(gridscore, clfName, metric):
+def plotGridPref(gridscore, clfName, metric, obj):
 	''' Plot Grid Performance
 	'''
-	data_path = '../MSPrediction-Python/data/'+obj+'/'+clfName+'_grids_'+metric+'.h5'
-	target = 'EnjoyLife'
+	data_path = 'data/'+obj+'/'+clfName+'_opt.h5'
 	f=hp.File(data_path, 'r')
-	gridscore = f[clfName].value
+	gridscore = f['grids_score'].value
 	paramNames = gridscore.dtype.fields.keys()
 	paramNames.remove("mean_validation_score")
 	paramNames.remove("std")
@@ -509,7 +532,7 @@ def param_sweeping(clf, obj, X, y, param_dist, metric, param, clfName):
 		y_pred = []
 		# new classifer each iteration
 		newclf = eval("clf.set_params("+ param + "= i)")
-		y_pred, y_true, gs_score_list, amp = testAlgo(newclf, X, y, clfName)
+		y_pred, y_true, grids_score, amp = testAlgo(newclf, X, y, clfName)
 		mean_fpr, mean_tpr, mean_auc = plot_unit_prep(y_pred, y_true, metric)
 		scores.append(mean_auc)
 		print("Area under the ROC curve : %f" % mean_auc)
@@ -626,7 +649,16 @@ def main():
 	'''Some basic setup for prediction'''
 	####### This part can be modified to fulfill different needs #####
 	data_path = './data/predData.h5'
-	obj = 'CorewFam'
+	f = hp.File(data_path, 'r')
+	objs = [str(i) for i in f.keys()]
+	f.close()
+	#########QUESTIONS################################################
+	print("Choose one dataset from the following list?")
+	for i in objs:
+		print i
+	obj = raw_input()
+	if obj not in objs:
+		obj = raw_input("No such dataset exists. Please enter a different dataset name. \n")
 	target = 'ModEDSS'
 	########## Can use raw_input instead as well######################
 	global featureNames
@@ -638,8 +670,6 @@ def main():
 		X = X.reshape(X.shape[0], 1)
 		num_features = 1
 	random_forest_params["max_features"] = range(1, num_features + 1)
-	#########QUESTIONS################################################
-
 	### Importances/ Coefficient of different params
 	plot_gaussian = raw_input("Plot Gaussian2 Fit? (Y/N)")
 	if plot_gaussian == "Y":
@@ -667,12 +697,12 @@ def main():
 		print("Output for " + obj + " has already been generated")
 	else:
 		print("There is no output data for " + obj)
-	saveoutput = raw_input("Do you want to save the output for" + obj + "?")
-	if saveoutput:
+	saveoutput = raw_input("Do you want to save the output (y_pred, y_true, gridscore (plus importance for RandomForest)) for " + obj + "? (Y/N)")
+	if saveoutput == "Y":
 		output_opt = raw_input("Save output with parameter optimization? (Yes/ No/ Both)")
 		if (output_opt == 'Yes'):
 			save_output(obj, X, y, opt = True)
-		elif (outpout_opt == 'No'):
+		elif (output_opt == 'No'):
 			save_output(obj, X, y, opt = False)
 		else:
 			save_output(obj, X, y, opt = True)
