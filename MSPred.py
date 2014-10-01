@@ -79,7 +79,10 @@ def fitAlgo(clf, Xtrain, Ytrain, opt = False, param_dict = None, opt_metric = 'r
         if param_dict != None:
             assert(map(lambda x: not isinstance(param_dict[x], list), param_dict))
             for k in param_dict.keys():
-	            clf.set_params(k = param_dict[k])
+            	print k
+            	print opt
+            	print param_dict
+            	clf.set_params(k = param_dict[k])
         clf.fit(Xtrain, Ytrain)
         return clf, [], []
 
@@ -132,7 +135,10 @@ def save_output(obj, X, y, opt = True):
 	'''
 	for clfName in classifiers1.keys():
 		clf = classifiers1[clfName]
-		param_dist = param_dist_dict[clfName]
+		if opt:
+			param_dist = param_dist_dict[clfName]
+		else:
+			param_dist = None
 		# grids = grid_score_list
 		y_pred, y_true, grids, imp = testAlgo(clf, X, y, clfName, opt, param_dist)
 		y_pred = fill_2d(y_pred)
@@ -165,6 +171,35 @@ def save_output(obj, X, y, opt = True):
 
 ### Plot results
 
+def open_output(clfName, obj, opt):
+	''' Open the ouput file and transform the data into desired format
+	Keyword arguments:
+		clfName: name of the classifier
+		obj: dataframe name
+		opt: whether use optimization
+	Returns:
+		y_true
+		y_pred
+		grids_score
+		imp
+	'''
+	data_path = './data/'+obj + '/'
+	print("Open output for " + clfName)
+	if opt:
+		data_path1 = data_path + clfName + '_opt.h5'
+	else:
+		data_path1 = data_path + clfName + '_noopt.h5'
+	f = hp.File(data_path1, 'r')
+	y_pred = f['y_pred'].value
+	y_pred = map(lambda x: x[~np.isnan(x)], y_pred)
+	y_true = f['y_true'].value
+	y_true = map(lambda x: x[~np.isnan(x)], y_true)
+	grids_score = f['grids_score'].value
+	imp = f['imp'].value
+	f.close()
+	return y_pred, y_true, grids_score, imp
+
+
 def compare_clf(clfs, obj, metric = 'roc_auc', opt = False, n_iter=4, folds=4, times=4):
 	'''Compare classifiers with mean roc_auc'''
 	mean_everything= {}
@@ -173,21 +208,12 @@ def compare_clf(clfs, obj, metric = 'roc_auc', opt = False, n_iter=4, folds=4, t
 	data_path = './data/'+obj + '/'
 	for clfName in clfs.keys():
 		print clfName
-		if opt:
-			data_path1 = data_path + clfName + '_opt.h5'
-		else:
-			data_path1 = data_path + clfName + '_noopt.h5'
-		f = hp.File(data_path1, 'r')
-		y_pred = f['y_pred'].value
-		y_pred = map(lambda x: x[~np.isnan(x)], y_pred)
-		y_true = f['y_true'].value
-		y_true = map(lambda x: x[~np.isnan(x)], y_true)
-		grids_score = f['grids_score'].value
-		# Need to check imp's shape
-		if opt & (clfName == "RandomForest"):
-			imp = f['imp'].value
+		y_pred, y_true, grids_score, imp = open_output(clfName, obj, opt)
+		# Need to check imp's shape maybe
+		if (imp.shape[1]!= 1) & opt & (clfName == "RandomForest"):
+			imp.shape[1]
+			print clfName
 			plot_importances(imp,clfName, obj)
-			f.close()
 		# Because if opt = Flase, grids_score should be []
 		if len(grids_score)>0:
 			plotGridPref(grids_score, clfName, metric, obj)
