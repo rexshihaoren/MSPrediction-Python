@@ -47,6 +47,19 @@ def testAlgo(clf, X, y, clfName, opt = False, param_dict = None, opt_metric = 'r
             y_true0 = y[test_index]
             y_pred.append(y_pred0)
             y_true.append(y_true0)
+    # Only rearange format if grids is not []
+	if grids_score !=[]:
+		grids2 = grids_score
+		# stds = map(lambda x: x.__repr__().split(',')[1], grids)
+		fields = grids[0][0].keys()+list(grids[0]._fields)
+		fields.remove('parameters')
+		fields.remove('cv_validation_scores')
+		fields.append('std')
+		grids2 = map(lambda x: tuple(x[0].values()+[x[2].mean(),x[2].std()]),grids2)
+		datatype = [(fields[i], np.result_type(grids2[0][i]) if not isinstance(grids2[0][i], str) else '|S14') for i in range(0, len(fields))]
+		grids_score = np.array(grids2, datatype)
+	else:
+		grids_score = np.array([])
     return y_pred, y_true, grids_score, imp
 
 # Evaluation pipeline:
@@ -68,7 +81,8 @@ def fitAlgo(clf, Xtrain, Ytrain, opt = False, param_dict = None, opt_metric = 'r
                                 refit = True,
                                 n_jobs=-1, cv = 3, verbose = 3)
 
-        rs.fit(Xtrain, Ytrain)
+        print "fitting with the following parameters:" + rs.best_params_
+
         imp = []
         if clf.__class__.__name__ == "RandomForestClassifier":
         	imp = rs.best_estimator_.feature_importances_
@@ -138,22 +152,9 @@ def save_output(obj, X, y, opt = True):
 		else:
 			param_dist = None
 		# grids = grid_score_list
-		y_pred, y_true, grids, imp = testAlgo(clf, X, y, clfName, opt, param_dist)
+		y_pred, y_true, grids_score, imp = testAlgo(clf, X, y, clfName, opt, param_dist)
 		y_pred = fill_2d(y_pred)
 		y_true = fill_2d(y_true)
-		# Only rearange format if grids is not []
-		if grids !=[]:
-			grids2 = grids
-			# stds = map(lambda x: x.__repr__().split(',')[1], grids)
-			fields = grids[0][0].keys()+list(grids[0]._fields)
-			fields.remove('parameters')
-			fields.remove('cv_validation_scores')
-			fields.append('std')
-			grids2 = map(lambda x: tuple(x[0].values()+[x[2].mean(),x[2].std()]),grids2)
-			datatype = [(fields[i], np.result_type(grids2[0][i]) if not isinstance(grids2[0][i], str) else '|S14') for i in range(0, len(fields))]
-			grids_score = np.array(grids2, datatype)
-		else:
-			grids_score = np.array([])
 		imp = np.array(imp)
 		if opt:
 			f = hp.File('./data/'+ obj + '/' + clfName + '_opt.h5', 'w')
@@ -214,7 +215,7 @@ def compare_clf(clfs, obj, metric = 'roc_auc', opt = False, n_iter=4, folds=4, t
 			plot_importances(imp,clfName, obj)
 		# Because if opt = Flase, grids_score should be []
 		if len(grids_score)>0:
-			plotGridPref(grids_score, clfName, metric, obj)
+			plotGridPref(grids_score, clfName, obj, metric)
 		# output roc results and plot folds
 		mean_fpr, mean_tpr, mean_auc = plot_roc(y_pred, y_true, clfName, obj, opt)
 		mean_everything[clfName] = [mean_fpr, mean_tpr, mean_auc]
@@ -367,7 +368,7 @@ def plot_unit_prep(y_pred, y_true, metric, plotfold = False):
 	mean_area = auc(mean_x,mean_y)
 	return mean_x, mean_y, mean_area
 
-def plotGridPref(gridscore, clfName, metric, obj):
+def plotGridPref(gridscore, clfName, obj , metric = 'roc_auc'):
 	''' Plot Grid Performance
 	'''
 	# data_path = 'data/'+obj+'/'+clfName+'_opt.h5'
