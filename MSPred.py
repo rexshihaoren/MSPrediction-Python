@@ -28,8 +28,6 @@ def testAlgo(clf, X, y, clfName, opt = False, param_dict = None, opt_metric = 'r
     '''An algorithm that output the perdicted y and real y'''
     y_true = []
     y_pred = []
-    if opt:
-    	param_dict = param_dist_dict[clfName]
     grids_score = []
     imp = []
     for i in range(0, times):
