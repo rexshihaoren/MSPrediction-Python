@@ -118,7 +118,7 @@ def pred_prep(data_path, obj, target):
 ### Save data
 
 def fill_2d(X, fill = np.nan):
-	'''Function to fill list of array with a certain fill to make it a 2d_array with shape m X n, where m is the number of arrays in the list, n is the maxinum length of array in the list. 
+	'''Function to fill list of array with a certain fill to make it a 2d_array with shape m X n, where m is the number of arrays in the list, n is the maxinum length of array in the list.
 	'''
 	maxlen = max([len(x) for x in X])
 	newX = [np.append(x, np.array([fill] * (maxlen-len(x)))) for x in X]
@@ -511,7 +511,7 @@ def plotGaussian(X, y, obj, featureNames):
 	theta = clf.theta_
 	sigma = clf.sigma_
 	class_prior = clf.class_prior_
-	norm_func = lambda x, sigma, theta: 1 if np.isnan(x) else -0.5 * np.log(2 * np.pi*sigma) - 0.5 * ((x - theta)**2/sigma) 
+	norm_func = lambda x, sigma, theta: 1 if np.isnan(x) else -0.5 * np.log(2 * np.pi*sigma) - 0.5 * ((x - theta)**2/sigma)
 	norm_func = np.vectorize(norm_func)
 	n_samples = X.shape[0]
 	for j in range(X.shape[1]):
@@ -536,7 +536,7 @@ def plotGaussian(X, y, obj, featureNames):
 		pl.tight_layout()
 		# pl.show()
 		fig.savefig(jpath)
-		
+
 def plotMixNB(X, y, obj, featureNames, whichMix):
 	"""Plot MixNB fit on top of X.
 	"""
@@ -544,7 +544,7 @@ def plotMixNB(X, y, obj, featureNames, whichMix):
 	clf = classifiers[whichMix]
 	clf,_,_ = fitAlgo(clf, X,y, opt= True, param_dict = param_dist_dict[whichMix])
 	unique_y = np.unique(y)
-	# norm_func = lambda x, sigma, theta: 1 if np.isnan(x) else -0.5 * np.log(2 * np.pi*sigma) - 0.5 * ((x - theta)**2/sigma) 
+	# norm_func = lambda x, sigma, theta: 1 if np.isnan(x) else -0.5 * np.log(2 * np.pi*sigma) - 0.5 * ((x - theta)**2/sigma)
 	# norm_func = np.vectorize(norm_func)
 	n_samples = X.shape[0]
 	for j in range(X.shape[1]):
@@ -695,18 +695,18 @@ classifiers1 = {"LogisticRegression": LogisticRegression(),
 					}
 
 # dictionaries of different classifiers, these can be eyeballed from my parameter sweeping curve
-num_features = 4
-random_forest_params = {"n_estimators": range(25,100),
-			  "max_features": range(1, num_features + 1),
-			  "min_samples_split": range(1, 30),
-			  "min_samples_leaf": range(1, 30),
+num_features = 6
+random_forest_params = {"n_estimators": range(50,300,50),
+			  "max_features": range(2, num_features + 1),
+			  "min_samples_split": range(2, 10),
+			  "min_samples_leaf": range(2, 10),
 			  "bootstrap": [True, False],
 			  "criterion": ["gini", "entropy"]}
 # ['penalty', 'dual', 'tol', 'C', 'fit_intercept', 'intercept_scaling', 'class_weight', 'random_state']
 logistic_regression_params = {"penalty":['l1','l2'],
 					"C": np.linspace(.1, 1, 10),
 					"fit_intercept":[True, False],
-					"intercept_scaling":np.linspace(.1, 1, 10), 
+					"intercept_scaling":np.linspace(.1, 1, 10),
 					"tol":[1e-4, 1e-5, 1e-6]}
 # ['n_neighbors', 'weights', 'algorithm', 'leaf_size', 'p', 'metric']
 knn_params= {"n_neighbors":range(1,6),
