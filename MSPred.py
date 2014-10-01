@@ -21,6 +21,7 @@ import re
 from sklearn import preprocessing
 import brewer2mpl
 from scipy.stats import itemfreq
+from pprint import pprint
 paired = brewer2mpl.get_map('Paired', 'qualitative', 10).mpl_colors
 
 # Testing Pipeline:
@@ -47,19 +48,19 @@ def testAlgo(clf, X, y, clfName, opt = False, param_dict = None, opt_metric = 'r
             y_true0 = y[test_index]
             y_pred.append(y_pred0)
             y_true.append(y_true0)
-    # Only rearange format if grids is not []
-	if grids_score !=[]:
-		grids2 = grids_score
-		# stds = map(lambda x: x.__repr__().split(',')[1], grids)
-		fields = grids[0][0].keys()+list(grids[0]._fields)
-		fields.remove('parameters')
-		fields.remove('cv_validation_scores')
-		fields.append('std')
-		grids2 = map(lambda x: tuple(x[0].values()+[x[2].mean(),x[2].std()]),grids2)
-		datatype = [(fields[i], np.result_type(grids2[0][i]) if not isinstance(grids2[0][i], str) else '|S14') for i in range(0, len(fields))]
-		grids_score = np.array(grids2, datatype)
-	else:
-		grids_score = np.array([])
+    	# Only rearange format if grids is not []
+    if grids_score !=[]:
+        grids2 = grids_score
+# stds = map(lambda x: x.__repr__().split(',')[1], grids)
+        fields = grids2[0][0].keys()+list(grids2[0]._fields)
+        fields.remove('parameters')
+        fields.remove('cv_validation_scores')
+        fields.append('std')
+        grids2 = map(lambda x: tuple(x[0].values()+[x[2].mean(),x[2].std()]),grids2)
+        datatype = [(fields[i], np.result_type(grids2[0][i]) if not isinstance(grids2[0][i], str) else '|S14') for i in range(0, len(fields))]
+        grids_score = np.array(grids2, datatype)
+    else:
+        grids_score = np.array([])
     return y_pred, y_true, grids_score, imp
 
 # Evaluation pipeline:
@@ -81,7 +82,10 @@ def fitAlgo(clf, Xtrain, Ytrain, opt = False, param_dict = None, opt_metric = 'r
                                 refit = True,
                                 n_jobs=-1, cv = 3, verbose = 3)
 
-        print "fitting with the following parameters:" + rs.best_params_
+        rs.fit(Xtrain, Ytrain)
+        print "\n\n####### Optimal parameters: #########"
+        pprint(rs.best_params_)
+        print "############################## \n"
 
         imp = []
         if clf.__class__.__name__ == "RandomForestClassifier":
