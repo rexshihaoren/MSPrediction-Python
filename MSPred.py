@@ -96,7 +96,7 @@ def pred_prep(data_path, obj, target):
 		obj: name of the dataset
 		target: the target column name
 	'''
-	# Make sure "data/obj" and "plot/obj" exist
+	# Make sure "data/obj" and "plots/obj" exist
 	if not os.path.exists('data/'+obj):
 		os.makedirs('data/'+obj)
 	if not os.path.exists('plots/'+obj):
@@ -283,7 +283,7 @@ def clf_plot(obj, clfName, opt):
 	if opt & (clfName == "RandomForest")& (X.shape[1] != 1):
 		plot_importances(imp,clfName, obj)
 
-def plot_roc(y_pred, y_true, clfName, obj, opt):
+def plot_roc(y_pred, y_true, clfName, obj, opt, save_sub = True):
 	'''Plots the ROC Curve'''
 	fig = pl.figure(figsize=(8,6),dpi=150)
 	mean_fpr, mean_tpr, mean_auc = plot_unit_prep(y_pred, y_true, 'roc_auc', plotfold = True)
@@ -304,11 +304,12 @@ def plot_roc(y_pred, y_true, clfName, obj, opt):
 		save_path = 'plots/'+obj+'/'+clfName+'_roc_opt.pdf'
 	else:
 		save_path = 'plots/'+obj+'/'+clfName+'_roc_noopt.pdf'
-	fig.savefig(save_path)
+	if save_sub:
+		fig.savefig(save_path)
 	# pl.show()
 	return mean_fpr, mean_tpr, mean_auc
 
-def plot_pr(y_pred, y_true,clfName, obj, opt):
+def plot_pr(y_pred, y_true,clfName, obj, opt, save_sub = True):
 	'''Plot the Precision-Recall Curve'''
 	fig = pl.figure(figsize=(8,6),dpi=150)
 	mean_rec, mean_prec, mean_auc = plot_unit_prep(y_pred, y_true, 'pr')
@@ -325,7 +326,8 @@ def plot_pr(y_pred, y_true,clfName, obj, opt):
 		save_path = 'plots/'+obj+'/'+clfName+'_pr_opt.pdf'
 	else:
 		save_path = 'plots/'+obj+'/'+clfName+'_pr_noopt.pdf'
-	fig.savefig(save_path)
+	if save_sub:
+		fig.savefig(save_path)
 	# pl.show()
 	return mean_rec, mean_prec, mean_auc
 
@@ -370,9 +372,9 @@ def plot_unit_prep(y_pred, y_true, metric, plotfold = False):
 def plotGridPref(gridscore, clfName, metric, obj):
 	''' Plot Grid Performance
 	'''
-	data_path = 'data/'+obj+'/'+clfName+'_opt.h5'
-	f=hp.File(data_path, 'r')
-	gridscore = f['grids_score'].value
+	# data_path = 'data/'+obj+'/'+clfName+'_opt.h5'
+	# f=hp.File(data_path, 'r')
+	# gridscore = f['grids_score'].value
 	paramNames = gridscore.dtype.fields.keys()
 	paramNames.remove("mean_validation_score")
 	paramNames.remove("std")
@@ -410,6 +412,64 @@ def plotGridPref(gridscore, clfName, metric, obj):
 				cb.set_label(metric, fontsize = 30)
 				save_path = '../MSPrediction-Python/plots/'+obj+'/'+ clfName +'_' +metric+'_'+ i +'_'+ j+'.pdf'
 				fig.savefig(save_path)
+
+def compare_obj(datasets = [], models = [], opt = True):
+	''' A function that takes a list of datasets and clfNames, so that it compare the model performance (roc_auc, and pr)
+	'''
+	for clfName in models:
+		# Make sure "plots/clfName" exists
+		if not os.path.exists('plots/'+clfName):
+			os.makedirs('plots/'+clfName)
+		mean_everything= {}
+		mean_everything1 = {}
+		clf = classifiers1[clfName]
+		param_dict = param_dist_dict[clfName]
+		for obj in datasets:
+			y_pred, y_true, _, _ = open_output(clfName, obj, opt)
+			mean_fpr, mean_tpr, mean_auc = plot_roc(y_pred, y_true, clfName, obj, opt, save_sub = False)
+			mean_everything[obj] = [mean_fpr, mean_tpr, mean_auc]
+
+			# out pr results and plot folds
+			mean_rec, mean_prec, mean_auc1 = plot_pr(y_pred, y_true, clfName, obj, opt, save_sub = False)
+			mean_everything1[obj] = [mean_rec, mean_prec, mean_auc1]
+
+		# Compare mean roc score of all datasets with clf
+		fig = pl.figure(figsize=(8,6),dpi=150)
+		for obj in  mean_everything:
+			[mean_fpr, mean_tpr, mean_auc] = mean_everything[obj]
+			pl.plot(mean_fpr, mean_tpr, lw=3, label = obj + ' (area = %0.2f)' %mean_auc)
+		pl.plot([0, 1], [0, 1], 'k--')
+		pl.xlim([0.0, 1.0])
+		pl.ylim([0.0, 1.0])
+		pl.xlabel('False Positive Rate',fontsize=30)
+		pl.ylabel('True Positive Rate',fontsize=30)
+		pl.title('Receiver Operating Characteristic',fontsize=25)
+		pl.legend(loc='lower right')
+		pl.tight_layout()
+		if opt:
+			save_path = 'plots/'+clfName+'/'+'dataset_comparison_'+ 'roc_auc' +'_opt.pdf'
+		else:
+			save_path = 'plots/'+clfName+'/'+'dataset_comparison_'+ 'roc_auc' +'_noopt.pdf'
+		fig.savefig(save_path)
+
+		# Compare pr score of all clfs
+		fig1 = pl.figure(figsize=(8,6),dpi=150)
+		for obj in  mean_everything1:
+			[mean_rec, mean_prec, mean_auc1] = mean_everything1[obj]
+			pl.plot(mean_rec, mean_prec, lw=3, label = obj + ' (area = %0.2f)' %mean_auc1)
+		pl.plot([0, 1], [0, 1], 'k--')
+		pl.xlim([0.0, 1.0])
+		pl.ylim([0.0, 1.0])
+		pl.xlabel('Recall',fontsize=30)
+		pl.ylabel('Precision',fontsize=30)
+		pl.title('Precision-Recall',fontsize=25)
+		pl.legend(loc='lower right')
+		pl.tight_layout()
+		if opt:
+			save_path = 'plots/'+clfName+'/'+'dataset_comparison_'+ 'pr' +'_opt.pdf'
+		else:
+			save_path = 'plots/'+clfName+'/'+'dataset_comparison_'+ 'pr' +'_noopt.pdf'
+		fig1.savefig(save_path)
 
 ### Functions to analyze different models, plot importances for random forest, coefficients for logistic and linear regressions, and fit pdf plot for Bayes
 
@@ -574,6 +634,9 @@ def param_sweeping(clf, obj, X, y, param_dist, metric, param, clfName):
 	fig.savefig('plots/'+obj+'/'+ clfName +'_' + param +'_'+'ps.pdf')
 	pl.show()
 
+### Question Helpers ###
+#
+
 def param_sweep_select(clf):
 	'''Asking user the specifics about parameter sweeping'''
 	arglist = getargspec(clf.__init__).args
@@ -591,6 +654,19 @@ def choose_clf(classifiers):
 	clf = classifiers[clfName]
 	return clf, clfName
 
+def comp_obj_select():
+	print("Which following datasets do you wanna use?")
+	for i in classifiers1.keys():
+		print i
+	s= raw_input("Please input in a list format, e.g. [\"Core\", \"Core_Imp\"]")
+	datasets = eval(s)
+	print("Which following classifiers do you wanna use?")
+	for i in classifiers1.keys():
+		print i
+	s = raw_input("Please input in a list format, e.g. [\"RandomForest\", \"LogisticRegression\"]")
+	models = eval(s)
+	comp_obj_opt = raw_input("With optimization?")
+	return datasets, models, (comp_obj_opt == 'Y')
 ######## Global Parameters #######
 
 # Possible Classifiers
@@ -679,6 +755,17 @@ def main():
 	objs = [str(i) for i in f.keys()]
 	f.close()
 	#########QUESTIONS################################################
+	#
+	# Compre datasets
+	comp_obj = raw_input("Do you want to compare different datasets? (Y/N)")
+	if (comp_obj == 'Y'):
+		datasets, models, opt = comp_obj_select()
+		print datasets
+		print models
+		print opt
+		compare_obj(datasets, models, opt)
+	# single_ana = raw_input("Do you want to do single dataset analysis?")
+	print("Now let's do single dataset analysis. \n")
 	print("Choose one dataset from the following list?")
 	for i in objs:
 		print i
