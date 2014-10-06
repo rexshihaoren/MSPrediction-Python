@@ -216,7 +216,7 @@ def compare_clf(clfs, obj, metric = 'roc_auc', opt = False, n_iter=4, folds=4, t
 		if (imp.shape[1]!= 1) & opt & (clfName == "RandomForest"):
 			imp.shape[1]
 			print clfName
-			plot_importances(imp,clfName, obj)
+			plot_importances(imp,clfName, obj, featureNames)
 		# Because if opt = Flase, grids_score should be []
 		if len(grids_score)>0:
 			plotGridPref(grids_score, clfName, obj, metric)
@@ -263,7 +263,7 @@ def compare_clf(clfs, obj, metric = 'roc_auc', opt = False, n_iter=4, folds=4, t
 		save_path = 'plots/'+obj+'/'+'clf_comparison_'+ 'pr' +'_noopt.pdf'
 	fig1.savefig(save_path)
 
-def clf_plot(obj, clfName, opt):
+def clf_plot(obj, clfName, opt, featureNames):
 	'''
 	Plot experiment results
 	Keyword Arguments:
@@ -284,7 +284,7 @@ def clf_plot(obj, clfName, opt):
 	plot_pr(y_pred, y_true, clfName, obj, opt)
 	# Plotting feature_importances
 	if opt & (clfName == "RandomForest")& (X.shape[1] != 1):
-		plot_importances(imp,clfName, obj)
+		plot_importances(imp,clfName, obj, featureNames)
 
 def plot_roc(y_pred, y_true, clfName, obj, opt, save_sub = True):
 	'''Plots the ROC Curve'''
@@ -476,7 +476,7 @@ def compare_obj(datasets = [], models = [], opt = True):
 
 ### Functions to analyze different models, plot importances for random forest, coefficients for logistic and linear regressions, and fit pdf plot for Bayes
 
-def plot_importances(imp, clfName, obj):
+def plot_importances(imp, clfName, obj, featureNames):
     imp=np.vstack(imp)
     print imp
     mean_importance = np.mean(imp,axis=0)
@@ -485,7 +485,7 @@ def plot_importances(imp, clfName, obj):
     print indices
     print featureNames
     featureList = []
-    # num_features = len(featureNames)
+    num_features = len(featureNames)
     print("Feature ranking:")
     for f in range(num_features):
         featureList.append(featureNames[indices[f]])
@@ -587,7 +587,7 @@ def plotCoeff(X, y, obj, featureNames, whichReg):
     print indices
     print featureNames
     featureList = []
-    # num_features = len(featureNames)
+    num_features = len(featureNames)
     print("Feature ranking:")
     for f in range(num_features):
         featureList.append(featureNames[indices[f]])
@@ -670,6 +670,90 @@ def comp_obj_select():
 	models = eval(s)
 	comp_obj_opt = raw_input("With optimization?")
 	return datasets, models, (comp_obj_opt == 'Y')
+
+
+def save_output_select():
+	'''
+	Choose dataset to generate y_pred, y_true, grids_score and imp
+	'''
+	print("Choose datasets from the following in a list format. e.g. ['Core', 'Core_Imp']")
+	for obj in objs:
+		# Check whether the ouput data for obj has been generated
+		if os.path.exists("./data/"+obj):
+			print(obj + "(related output has already been generated)")
+		else:
+			print(obj)
+	choices = raw_input()
+	for obj in choices:
+		if obj not in objs:
+			print (obj + "No such dataset exists. Please enter a different list of dataset names. \n")
+		else:
+			save_output_single(obj)
+
+def save_output_single(obj):
+	print ("Saving output for " + obj)
+	target = 'ModEDSS'
+	# global featureNames
+	X, y, featureNames = pred_prep(data_path, obj, target)
+	# global num_features
+	try:
+		num_features = X.shape[1]
+	except IndexError:
+		X = X.reshape(X.shape[0], 1)
+		num_features = 1
+	random_forest_params["max_features"] = range(1, num_features + 1)
+	### Importances/ Coefficient of different params
+	plot_gaussian = raw_input("Plot Gaussian2 Fit? (Y/N)")
+	if plot_gaussian == "Y":
+		plotGaussian(X, y, obj, featureNames)
+	plot_MixNB = raw_input("Plot MixNB Fit? (Y/N)")
+	if plot_MixNB == "Y":
+		whichMix = raw_input("MixNB or MixNB2? (BayesMixed/BayesMixed2/Both)")
+		if (whichMix == "Both") or (whichMix == "both"):
+			plotMixNB(X, y, obj, featureNames, whichMix = "BayesMixed")
+			plotMixNB(X, y, obj, featureNames, whichMix = "BayesMixed2")
+		else:
+			plotMixNB(X, y, obj, featureNames, whichMix)
+	reg_Imp = raw_input("Plot Regression's Importance? (Y/N)")
+	if reg_Imp == "Y":
+		whichReg = raw_input("LogisticRegression/LinearRegression/Both? ")
+		if (whichReg == "Both") or (whichReg == "both"):
+			plotCoeff(X, y, obj, featureNames, whichReg = "LogisticRegression")
+			plotCoeff(X, y, obj, featureNames, whichReg = "LinearRegression")
+		else:
+			plotCoeff(X, y, obj, featureNames, whichReg)
+	# output y_pred, y_true, grids_score and imp
+	saveoutput = raw_input("Do you want to save the output (y_pred, y_true, gridscore (plus importance for RandomForest)) for " + obj + "? (Y/N)")
+	if saveoutput == "Y":
+		output_opt = raw_input("Save output with parameter optimization? (Yes/ No/ Both)")
+		if (output_opt == 'Yes'):
+			save_output(obj, X, y, opt = True)
+		elif (output_opt == 'No'):
+			save_output(obj, X, y, opt = False)
+		else:
+			save_output(obj, X, y, opt = True)
+			save_output(obj, X, y, opt = False)
+	# Single clf analysis for obj
+	sin_ana = raw("Single clf analysis for "+ obj + " ? (Y\N)")
+	if (sin_ana == 'Y'):
+		clf, clfName = choose_clf(classifiers1)
+		param_sweep = raw_input("Parameter Sweeping? (Y/N) ")
+		if param_sweep == "Y" or param_sweep == "y":
+			param, param_dist, metric = param_sweep_select(clf)
+			param_sweeping(clf, obj, X, y, param_dist, metric, param, clfName)
+		else:
+			print ("Your only choice now is to plot ROC and PR curves for "+clfName+" classifier")
+			# Asking whether to optimize
+			opt = raw_input("Optimization? (Y/N)")
+			opt = (opt== "Y" or opt == "y")
+			if opt:
+				param_dist = param_dist_dict[clfName]
+			else:
+				param_dist = None
+			clf_plot(obj, clfName, opt, featureNames)
+
+
+
 ######## Global Parameters #######
 
 # Possible Classifiers
@@ -753,103 +837,28 @@ param_dist_dict = {"LogisticRegression": logistic_regression_params,
 def main():
 	'''Some basic setup for prediction'''
 	####### This part can be modified to fulfill different needs #####
+	global data_path
 	data_path = './data/predData.h5'
 	f = hp.File(data_path, 'r')
+	global objs
 	objs = [str(i) for i in f.keys()]
 	f.close()
 	#########QUESTIONS################################################
-	#
-	# Compre datasets
-	comp_obj = raw_input("Do you want to compare different datasets? (Y/N)")
-	if (comp_obj == 'Y'):
-		datasets, models, opt = comp_obj_select()
-		print datasets
-		print models
-		print opt
-		compare_obj(datasets, models, opt)
-	# single_ana = raw_input("Do you want to do single dataset analysis?")
-	print("Now let's do single dataset analysis. \n")
-	print("Choose one dataset from the following list?")
-	for i in objs:
-		print i
-	obj = raw_input()
-	if obj not in objs:
-		obj = raw_input("No such dataset exists. Please enter a different dataset name. \n")
-	target = 'ModEDSS'
-	########## Can use raw_input instead as well######################
-	global featureNames
-	X, y, featureNames = pred_prep(data_path, obj, target)
-	global num_features
-	try:
-		num_features = X.shape[1]
-	except IndexError:
-		X = X.reshape(X.shape[0], 1)
-		num_features = 1
-	random_forest_params["max_features"] = range(1, num_features + 1)
-	### Importances/ Coefficient of different params
-	plot_gaussian = raw_input("Plot Gaussian2 Fit? (Y/N)")
-	if plot_gaussian == "Y":
-		plotGaussian(X, y, obj, featureNames)
-	plot_MixNB = raw_input("Plot MixNB Fit? (Y/N)")
-	if plot_MixNB == "Y":
-		whichMix = raw_input("MixNB or MixNB2? (BayesMixed/BayesMixed2/Both)")
-		if (whichMix == "Both") or (whichMix == "both"):
-			plotMixNB(X, y, obj, featureNames, whichMix = "BayesMixed")
-			plotMixNB(X, y, obj, featureNames, whichMix = "BayesMixed2")
-		else:
-			plotMixNB(X, y, obj, featureNames, whichMix)
-	reg_Imp = raw_input("Plot Regression's Importance? (Y/N)")
-	if reg_Imp == "Y":
-		whichReg = raw_input("LogisticRegression/LinearRegression/Both? ")
-		if (whichReg == "Both") or (whichReg == "both"):
-			plotCoeff(X, y, obj, featureNames, whichReg = "LogisticRegression")
-			plotCoeff(X, y, obj, featureNames, whichReg = "LinearRegression")
-		else:
-			plotCoeff(X, y, obj, featureNames, whichReg)
-
-	### Output Data
-	# Check whether the ouput data for obj has been generated
-	if os.listdir("./data/"+obj) != []:
-		print("Output for " + obj + " has already been generated")
+	# 
+	option = raw_input("Launch Computation (a) or display result (b)? (a/b) ")
+	if (option == 'a'):
+		save_output_select()
 	else:
-		print("There is no output data for " + obj)
-	saveoutput = raw_input("Do you want to save the output (y_pred, y_true, gridscore (plus importance for RandomForest)) for " + obj + "? (Y/N)")
-	if saveoutput == "Y":
-		output_opt = raw_input("Save output with parameter optimization? (Yes/ No/ Both)")
-		if (output_opt == 'Yes'):
-			save_output(obj, X, y, opt = True)
-		elif (output_opt == 'No'):
-			save_output(obj, X, y, opt = False)
-		else:
-			save_output(obj, X, y, opt = True)
-			save_output(obj, X, y, opt = False)
-
-	### Plot results
-	com_clf = raw_input("Compare classifiers? (Y/N) ")
-	# com_clf = "Y"
-	if com_clf == "Y":
-		com_clf_opt = raw_input ("With optimization? (Y/N)")
-		# com_clf_opt = "Y"
-		com_clf_opt = (com_clf_opt == 'Y')
-		compare_clf(classifiers1, obj, metric = 'roc_auc', opt = com_clf_opt)
-	else:
-		clf, clfName = choose_clf(classifiers)
-		param_sweep = raw_input("Parameter Sweeping? (Y/N) ")
-		# param_sweep ="Y"
-		if param_sweep == "Y" or param_sweep == "y":
-			param, param_dist, metric = param_sweep_select(clf)
-			param_sweeping(clf, obj, X, y, param_dist, metric, param, clfName)
-		else:
-			print ("Your only choice now is to plot ROC and PR curves for "+clfName+" classifier")
-			# Asking whether to optimize
-			opt = raw_input("Optimization? (Y/N)")
-			opt = (opt== "Y" or opt == "y")
-			# opt = True
-			if opt:
-				param_dist = param_dist_dict[clfName]
-			else:
-				param_dist = None
-			clf_plot(obj, clfName, opt)
+		# Compre datasets
+		comp_obj = raw_input("Do you want to compare different datasets? (Y/N)")
+		if (comp_obj == 'Y'):
+			datasets, models, opt = comp_obj_select()
+			compare_obj(datasets, models, opt)
+		# Compare classifiers
+		com_clf = raw_input("Compare classifiers? (Y/N) ")
+		if (com_clf == "Y"):
+			com_clf_opt = raw_input ("With optimization? (Y/N)")
+			compare_clf(classifiers1, obj, metric = 'roc_auc', opt = (com_clf_opt == 'Y'))
 
 if __name__ == "__main__":
 	main()
