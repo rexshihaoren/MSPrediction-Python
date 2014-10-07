@@ -215,9 +215,7 @@ def compare_clf(clfs, obj, metric = 'roc_auc', opt = False, n_iter=4, folds=4, t
 		print clfName
 		y_pred, y_true, grids_score, imp = open_output(clfName, obj, opt)
 		# Need to check imp's shape maybe
-		if (imp.shape[1]!= 1) & opt & (clfName == "RandomForest"):
-			imp.shape[1]
-			print clfName
+		if (len(imp[0])!= 1) & opt & (clfName == "RandomForest"):
 			plot_importances(imp,clfName, obj)
 		# Because if opt = Flase, grids_score should be []
 		if len(grids_score)>0:
@@ -485,6 +483,7 @@ def compare_obj(datasets = [], models = [], opt = True):
 def plot_importances(imp, clfName, obj):
 	featureNames = list(imp.dtype.names)
 	# imp=np.vstack(imp)
+	imp = imp.view(np.float64).reshape(imp.shape + (-1,))
 	mean_importance = np.mean(imp,axis=0)
 	std_importance = np.std(imp,axis=0)
 	indices = np.argsort(mean_importance)[::-1]
@@ -762,7 +761,6 @@ def com_clf_select():
 	existobjs = []
 	for obj in objs:
 		if os.path.exists("./data/"+obj):
-			print(obj)
 			existobjs.append(obj)
 	for i in existobjs:
 		print i
