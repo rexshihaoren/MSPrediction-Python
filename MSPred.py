@@ -422,6 +422,9 @@ def plotGridPref(gridscore, clfName, obj , metric = 'roc_auc'):
 def compare_obj(datasets = [], models = [], opt = True):
 	''' A function that takes a list of datasets and clfNames, so that it compare the model performance (roc_auc, and pr)
 	'''
+	dsls = ''
+	for i in datasets:
+		dsls += (i+'_')
 	for clfName in models:
 		# Make sure "plots/clfName" exists
 		if not os.path.exists('plots/'+clfName):
@@ -453,9 +456,9 @@ def compare_obj(datasets = [], models = [], opt = True):
 		pl.legend(loc='lower right')
 		pl.tight_layout()
 		if opt:
-			save_path = 'plots/'+clfName+'/'+'dataset_comparison_'+ 'roc_auc' +'_opt.pdf'
+			save_path = 'plots/'+clfName+'/'+'dataset_comparison_'+ dsls + 'roc_auc' +'_opt.pdf'
 		else:
-			save_path = 'plots/'+clfName+'/'+'dataset_comparison_'+ 'roc_auc' +'_noopt.pdf'
+			save_path = 'plots/'+clfName+'/'+'dataset_comparison_'+ dsls + 'roc_auc' +'_noopt.pdf'
 		fig.savefig(save_path)
 
 		# Compare pr score of all clfs
@@ -472,9 +475,9 @@ def compare_obj(datasets = [], models = [], opt = True):
 		pl.legend(loc='lower right')
 		pl.tight_layout()
 		if opt:
-			save_path = 'plots/'+clfName+'/'+'dataset_comparison_'+ 'pr' +'_opt.pdf'
+			save_path = 'plots/'+clfName+'/'+'dataset_comparison_'+ dsls + 'pr' +'_opt.pdf'
 		else:
-			save_path = 'plots/'+clfName+'/'+'dataset_comparison_'+ 'pr' +'_noopt.pdf'
+			save_path = 'plots/'+clfName+'/'+'dataset_comparison_'+ dsls + 'pr' +'_noopt.pdf'
 		fig1.savefig(save_path)
 
 ### Functions to analyze different models, plot importances for random forest, coefficients for logistic and linear regressions, and fit pdf plot for Bayes
@@ -671,7 +674,7 @@ def comp_obj_select():
 		print i
 	s = raw_input("Please input in a list format, e.g. [\"RandomForest\", \"LogisticRegression\"]")
 	models = eval(s)
-	comp_obj_opt = raw_input("With optimization?")
+	comp_obj_opt = raw_input("With optimization (Y\N) ? ")
 	return datasets, models, (comp_obj_opt == 'Y')
 
 
