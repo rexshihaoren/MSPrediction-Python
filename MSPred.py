@@ -25,7 +25,7 @@ from pprint import pprint
 paired = brewer2mpl.get_map('Paired', 'qualitative', 10).mpl_colors
 
 # Testing Pipeline:
-def testAlgo(clf, X, y, clfName, opt = False, param_dict = None, opt_metric = 'roc_auc', n_iter = 5, folds = 10, times = 10):
+def testAlgo(clf, X, y, clfName, featureNames, opt = False, param_dict = None, opt_metric = 'roc_auc', n_iter = 5, folds = 10, times = 10):
     '''An algorithm that output the perdicted y and real y'''
     y_true = []
     y_pred = []
@@ -36,6 +36,7 @@ def testAlgo(clf, X, y, clfName, opt = False, param_dict = None, opt_metric = 'r
         rs = np.random.randint(1,1000)
         cv = KFold(len(y), n_folds = folds, shuffle = True, random_state = rs)
         for train_index, test_index in cv:
+
             impr_clf, grids_score0, imp0 = fitAlgo(clf, X[train_index], y[train_index], opt, param_dict, opt_metric, n_iter)
             grids_score += grids_score0
             imp.append(imp0)
@@ -48,10 +49,10 @@ def testAlgo(clf, X, y, clfName, opt = False, param_dict = None, opt_metric = 'r
             y_true0 = y[test_index]
             y_pred.append(y_pred0)
             y_true.append(y_true0)
-    	# Only rearange format if grids is not []
+    # Only rearange format if grids is not []
     if grids_score !=[]:
         grids2 = grids_score
-# stds = map(lambda x: x.__repr__().split(',')[1], grids)
+		# stds = map(lambda x: x.__repr__().split(',')[1], grids)
         fields = grids2[0][0].keys()+list(grids2[0]._fields)
         fields.remove('parameters')
         fields.remove('cv_validation_scores')
@@ -61,6 +62,9 @@ def testAlgo(clf, X, y, clfName, opt = False, param_dict = None, opt_metric = 'r
         grids_score = np.array(grids2, datatype)
     else:
         grids_score = np.array([])
+    if (clfName == 'RandomForest') & opt:
+    	imp = np.vstack(imp)
+    	imp = imp.view(dtype=[(i, 'float64') for i in featureNames]).reshape(len(imp),)
     return y_pred, y_true, grids_score, imp
 
 # Evaluation pipeline:
@@ -141,7 +145,7 @@ def fill_2d(X, fill = np.nan):
 	return np.array(newX)
 
 
-def save_output(obj, X, y, opt = True):
+def save_output(obj, X, y, featureNames,opt = True):
 	'''Save Output (y_pred, y_true, grids_score, and imp) for this dataframe
     Keyword arguments:
     obj - - dataframe name
@@ -152,20 +156,18 @@ def save_output(obj, X, y, opt = True):
 	for clfName in classifiers1.keys():
 		clf = classifiers1[clfName]
 		if opt:
-			param_dist = param_dist_dict[clfName]
+			param_dict = param_dist_dict[clfName]
 		else:
-			param_dist = None
+			param_dict = None
 		# grids = grid_score_list
-		y_pred, y_true, grids_score, imp = testAlgo(clf, X, y, clfName, opt, param_dist)
+		y_pred, y_true, grids_score, imp = testAlgo(clf, X, y, clfName, featureNames, opt, param_dict)
 		y_pred = fill_2d(y_pred)
 		y_true = fill_2d(y_true)
-		imp = np.array(imp)
 		if opt:
 			f = hp.File('./data/'+ obj + '/' + clfName + '_opt.h5', 'w')
 		else:
 			f = hp.File('./data/'+ obj + '/' + clfName + '_noopt.h5', 'w')
 		print("Saving output for " + clfName)
-		print y_true
 		f.create_dataset('y_true', data = y_true)
 		f.create_dataset('y_pred', data = y_pred)
 		f.create_dataset('grids_score', data = grids_score)
@@ -216,7 +218,7 @@ def compare_clf(clfs, obj, metric = 'roc_auc', opt = False, n_iter=4, folds=4, t
 		if (imp.shape[1]!= 1) & opt & (clfName == "RandomForest"):
 			imp.shape[1]
 			print clfName
-			plot_importances(imp,clfName, obj, featureNames)
+			plot_importances(imp,clfName, obj)
 		# Because if opt = Flase, grids_score should be []
 		if len(grids_score)>0:
 			plotGridPref(grids_score, clfName, obj, metric)
@@ -277,6 +279,7 @@ def clf_plot(obj, clfName, opt, featureNames):
 	f=hp.File(data_path, 'r+')
 	y_pred = f['y_pred'].value
 	y_true = f['y_true'].value
+	imp = f['imp'].value
 	f.close()
 	# Plotting auc_roc and precision_recall
 	plot_roc(y_pred, y_true, clfName, obj, opt)
@@ -284,7 +287,7 @@ def clf_plot(obj, clfName, opt, featureNames):
 	plot_pr(y_pred, y_true, clfName, obj, opt)
 	# Plotting feature_importances
 	if opt & (clfName == "RandomForest")& (X.shape[1] != 1):
-		plot_importances(imp,clfName, obj, featureNames)
+		plot_importances(imp,clfName, obj)
 
 def plot_roc(y_pred, y_true, clfName, obj, opt, save_sub = True):
 	'''Plots the ROC Curve'''
@@ -476,33 +479,33 @@ def compare_obj(datasets = [], models = [], opt = True):
 
 ### Functions to analyze different models, plot importances for random forest, coefficients for logistic and linear regressions, and fit pdf plot for Bayes
 
-def plot_importances(imp, clfName, obj, featureNames):
-    imp=np.vstack(imp)
-    print imp
-    mean_importance = np.mean(imp,axis=0)
-    std_importance = np.std(imp,axis=0)
-    indices = np.argsort(mean_importance)[::-1]
-    print indices
-    print featureNames
-    featureList = []
-    num_features = len(featureNames)
-    print("Feature ranking:")
-    for f in range(num_features):
-        featureList.append(featureNames[indices[f]])
-        print("%d. feature %s (%.2f)" % (f, featureNames[indices[f]], mean_importance[indices[f]]))
-    fig = pl.figure(figsize=(8,6),dpi=150)
-    pl.title("Feature importances",fontsize=30)
-    pl.bar(range(num_features), mean_importance[indices],
-            yerr = std_importance[indices], color=paired[0], align="center",
-            edgecolor=paired[0],ecolor=paired[1])
-    pl.xticks(range(num_features), featureList, size=15,rotation=90)
-    pl.ylabel("Importance",size=30)
-    pl.yticks(size=20)
-    pl.xlim([-1, num_features])
-    # fix_axes()
-    pl.tight_layout()
-    save_path = 'plots/'+obj+'/'+clfName+'_feature_importances.pdf'
-    fig.savefig(save_path)
+def plot_importances(imp, clfName, obj):
+	featureNames = list(imp.dtype.names)
+	# imp=np.vstack(imp)
+	mean_importance = np.mean(imp,axis=0)
+	std_importance = np.std(imp,axis=0)
+	indices = np.argsort(mean_importance)[::-1]
+	print indices
+	print featureNames
+	featureList = []
+	num_features = len(featureNames)
+	print("Feature ranking:")
+	for f in range(num_features):
+	    featureList.append(featureNames[indices[f]])
+	    print("%d. feature %s (%.2f)" % (f, featureNames[indices[f]], mean_importance[indices[f]]))
+	fig = pl.figure(figsize=(8,6),dpi=150)
+	pl.title("Feature importances",fontsize=30)
+	pl.bar(range(num_features), mean_importance[indices],
+	        yerr = std_importance[indices], color=paired[0], align="center",
+	        edgecolor=paired[0],ecolor=paired[1])
+	pl.xticks(range(num_features), featureList, size=15,rotation=90)
+	pl.ylabel("Importance",size=30)
+	pl.yticks(size=20)
+	pl.xlim([-1, num_features])
+	# fix_axes()
+	pl.tight_layout()
+	save_path = 'plots/'+obj+'/'+clfName+'_feature_importances.pdf'
+	fig.savefig(save_path)
 
 def plotGaussian(X, y, obj, featureNames):
 	"""Plot Gausian fit on top of X.
@@ -621,7 +624,7 @@ def param_sweeping(clf, obj, X, y, param_dist, metric, param, clfName):
 		y_pred = []
 		# new classifer each iteration
 		newclf = eval("clf.set_params("+ param + "= i)")
-		y_pred, y_true, grids_score, amp = testAlgo(newclf, X, y, clfName)
+		y_pred, y_true, grids_score, amp = testAlgo(newclf, X, y, clfName, featureNames)
 		mean_fpr, mean_tpr, mean_auc = plot_unit_prep(y_pred, y_true, metric)
 		scores.append(mean_auc)
 		print("Area under the ROC curve : %f" % mean_auc)
@@ -683,7 +686,7 @@ def save_output_select():
 			print(obj + "(related output has already been generated)")
 		else:
 			print(obj)
-	choices = raw_input()
+	choices = eval(raw_input())
 	for obj in choices:
 		if obj not in objs:
 			print (obj + "No such dataset exists. Please enter a different list of dataset names. \n")
@@ -727,14 +730,14 @@ def save_output_single(obj):
 	if saveoutput == "Y":
 		output_opt = raw_input("Save output with parameter optimization? (Yes/ No/ Both)")
 		if (output_opt == 'Yes'):
-			save_output(obj, X, y, opt = True)
+			save_output(obj, X, y, featureNames, opt = True)
 		elif (output_opt == 'No'):
-			save_output(obj, X, y, opt = False)
+			save_output(obj, X, y, featureNames, opt = False)
 		else:
-			save_output(obj, X, y, opt = True)
-			save_output(obj, X, y, opt = False)
+			save_output(obj, X, y, featureNames, opt = True)
+			save_output(obj, X, y, featureNames, opt = False)
 	# Single clf analysis for obj
-	sin_ana = raw("Single clf analysis for "+ obj + " ? (Y\N)")
+	sin_ana = raw_input("Single clf analysis for "+ obj + " ? (Y\N)")
 	if (sin_ana == 'Y'):
 		clf, clfName = choose_clf(classifiers1)
 		param_sweep = raw_input("Parameter Sweeping? (Y/N) ")
@@ -752,6 +755,19 @@ def save_output_single(obj):
 				param_dist = None
 			clf_plot(obj, clfName, opt, featureNames)
 
+def com_clf_select():
+	existobjs = []
+	for obj in objs:
+		if os.path.exists("./data/"+obj):
+			print(obj)
+			existobjs.append(obj)
+	for i in existobjs:
+		print i
+	obj = raw_input('Which dataset would you choose from above list?')
+	while obj not in existobjs:
+		obj = raw_input('Which dataset would you choose from above list?')
+	com_clf_opt = raw_input ("With optimization? (Y/N)")
+	compare_clf(classifiers1, obj, metric = 'roc_auc', opt = (com_clf_opt == 'Y'))
 
 
 ######## Global Parameters #######
@@ -857,8 +873,7 @@ def main():
 		# Compare classifiers
 		com_clf = raw_input("Compare classifiers? (Y/N) ")
 		if (com_clf == "Y"):
-			com_clf_opt = raw_input ("With optimization? (Y/N)")
-			compare_clf(classifiers1, obj, metric = 'roc_auc', opt = (com_clf_opt == 'Y'))
+			com_clf_select()
 
 if __name__ == "__main__":
 	main()
