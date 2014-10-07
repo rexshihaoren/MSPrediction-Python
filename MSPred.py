@@ -25,16 +25,16 @@ from pprint import pprint
 paired = brewer2mpl.get_map('Paired', 'qualitative', 10).mpl_colors
 
 # Testing Pipeline:
-def testAlgo(clf, X, y, clfName, featureNames, opt = False, param_dict = None, opt_metric = 'roc_auc', n_iter = 5, folds = 10, times = 10):
+def testAlgo(clf, X, y, clfName, featureNames, opt = False, param_dict = None, opt_metric = 'roc_auc', n_iter = 5, folds = 10, times = 10,  rs = 0):
     '''An algorithm that output the perdicted y and real y'''
     y_true = []
     y_pred = []
     grids_score = []
     imp = []
+    rs = [np.random.randint(1,1000) for i in xrange(times)] if rs == 0 else rs
     for i in range(0, times):
     	print str(i) +" iteration of testAlgo"
-        rs = np.random.randint(1,1000)
-        cv = KFold(len(y), n_folds = folds, shuffle = True, random_state = rs)
+        cv = KFold(len(y), n_folds = folds, shuffle = True, random_state = rs[i])
         for train_index, test_index in cv:
 
             impr_clf, grids_score0, imp0 = fitAlgo(clf, X[train_index], y[train_index], opt, param_dict, opt_metric, n_iter)
@@ -153,26 +153,29 @@ def save_output(obj, X, y, featureNames,opt = True):
     y - - training target array
     opt - - whether to use parameter optimization, default is True
 	'''
-	for clfName in classifiers1.keys():
-		clf = classifiers1[clfName]
-		if opt:
-			param_dict = param_dist_dict[clfName]
-		else:
-			param_dict = None
-		# grids = grid_score_list
-		y_pred, y_true, grids_score, imp = testAlgo(clf, X, y, clfName, featureNames, opt, param_dict)
-		y_pred = fill_2d(y_pred)
-		y_true = fill_2d(y_true)
-		if opt:
-			f = hp.File('./data/'+ obj + '/' + clfName + '_opt.h5', 'w')
-		else:
-			f = hp.File('./data/'+ obj + '/' + clfName + '_noopt.h5', 'w')
-		print("Saving output for " + clfName)
-		f.create_dataset('y_true', data = y_true)
-		f.create_dataset('y_pred', data = y_pred)
-		f.create_dataset('grids_score', data = grids_score)
-		f.create_dataset('imp', data = imp)
-		f.close()
+    rs = [np.random.randint(1,1000) for i in xrange(times)]
+    times = 10
+
+    for clfName in classifiers1.keys():
+    	clf = classifiers1[clfName]
+    	if opt:
+    		param_dict = param_dist_dict[clfName]
+    	else:
+    		param_dict = None
+    	# grids = grid_score_list
+    	y_pred, y_true, grids_score, imp = testAlgo(clf, X, y, clfName, featureNames, opt, param_dict, times = times, rs=rs)
+    	y_pred = fill_2d(y_pred)
+    	y_true = fill_2d(y_true)
+    	if opt:
+    		f = hp.File('./data/'+ obj + '/' + clfName + '_opt.h5', 'w')
+    	else:
+    		f = hp.File('./data/'+ obj + '/' + clfName + '_noopt.h5', 'w')
+    	print("Saving output for " + clfName)
+    	f.create_dataset('y_true', data = y_true)
+    	f.create_dataset('y_pred', data = y_pred)
+    	f.create_dataset('grids_score', data = grids_score)
+    	f.create_dataset('imp', data = imp)
+    	f.close()
 
 ### Plot results
 
@@ -861,7 +864,7 @@ def main():
 	objs = [str(i) for i in f.keys()]
 	f.close()
 	#########QUESTIONS################################################
-	# 
+	#
 	option = raw_input("Launch Computation (a) or display result (b)? (a/b) ")
 	if (option == 'a'):
 		save_output_select()
