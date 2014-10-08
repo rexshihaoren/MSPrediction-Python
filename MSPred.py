@@ -681,22 +681,27 @@ def comp_obj_select():
 
 
 def save_output_select():
-	'''
-	Choose dataset to generate y_pred, y_true, grids_score and imp
-	'''
-	print("Choose datasets from the following in a list format. e.g. ['Core', 'Core_Imp']")
-	for obj in objs:
-		# Check whether the ouput data for obj has been generated
-		if os.path.exists("./data/"+obj):
-			print(obj + "(related output has already been generated)")
-		else:
-			print(obj)
-	choices = eval(raw_input())
-	for obj in choices:
-		if obj not in objs:
-			print (obj + "No such dataset exists. Please enter a different list of dataset names. \n")
-		else:
-			save_output_single(obj)
+    '''
+    Choose dataset to generate y_pred, y_true, grids_score and imp
+    '''
+    e = True
+    while e:
+        e = False
+        print("Choose datasets from the following in a list format. e.g. ['Core', 'Core_Imp']")
+        for obj in objs:
+        # Check whether the ouput data for obj has been generated
+            if os.path.exists("./data/"+obj):
+                print(obj + "(related output has already been generated)")
+            else:
+                print(obj)
+            choices = eval(raw_input())
+        for obj in choices:
+            if obj not in objs:
+                print (obj + "No such dataset exists. Please type again the list of datasets... \n")
+                e = True
+    for obj in choices:
+        save_output_single(obj)
+
 
 def save_output_single(obj):
 	print ("Saving output for " + obj)
@@ -855,29 +860,29 @@ param_dist_dict = {"LogisticRegression": logistic_regression_params,
 				}
 
 def main():
-	'''Some basic setup for prediction'''
-	####### This part can be modified to fulfill different needs #####
-	global data_path
-	data_path = './data/predData.h5'
-	f = hp.File(data_path, 'r')
-	global objs
-	objs = [str(i) for i in f.keys()]
-	f.close()
-	#########QUESTIONS################################################
-	#
-	option = raw_input("Launch Computation (a) or display result (b)? (a/b) ")
-	if (option == 'a'):
-		save_output_select()
-	else:
-		# Compre datasets
-		comp_obj = raw_input("Do you want to compare different datasets? (Y/N)")
-		if (comp_obj == 'Y'):
-			datasets, models, opt = comp_obj_select()
-			compare_obj(datasets, models, opt)
-		# Compare classifiers
-		com_clf = raw_input("Compare classifiers? (Y/N) ")
-		if (com_clf == "Y"):
-			com_clf_select()
+    '''Some basic setup for prediction'''
+    ####### This part can be modified to fulfill different needs #####
+    global data_path
+    data_path = './data/predData.h5'
+    f = hp.File(data_path, 'r')
+    global objs
+    objs = [str(i) for i in f.keys()]
+    f.close()
+    #########QUESTIONS################################################
+    #
+    option = raw_input("Launch Computation (a) or display result (b)? (a/b) ")
+    if (option == 'a'):
+        save_output_select()
+    else:
+    # Compre datasets
+        comp_obj = raw_input("Do you want to compare different datasets? (Y/N)")
+        if (comp_obj == 'Y'):
+            datasets, models, opt = comp_obj_select()
+            compare_obj(datasets, models, opt)
+        # Compare classifiers
+        com_clf = raw_input("Compare classifiers? (Y/N) ")
+        if (com_clf == "Y"):
+            com_clf_select()
 
 if __name__ == "__main__":
 	main()
