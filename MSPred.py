@@ -799,11 +799,11 @@ def save_output_single(obj):
 
 def com_clf_select():
 	existobjs = []
+	print("Here are the existing datasets with output saved: \n")
 	for obj in objs:
+		# Check whether the ouput data for obj has been generated
 		if os.path.exists("./data/"+obj):
-			existobjs.append(obj)
-	for i in existobjs:
-		print i
+			print(obj)
 	obj = raw_input('Which dataset would you choose from above list?')
 	while obj not in existobjs:
 		obj = raw_input('Which dataset would you choose from above list?')
