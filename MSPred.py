@@ -1,4 +1,5 @@
 import pylab as pl
+import math
 import h5py as hp
 import numpy as np
 import math as M
@@ -33,10 +34,9 @@ def testAlgo(clf, X, y, clfName, featureNames, opt = False, param_dict = None, o
     imp = []
     rs = [np.random.randint(1,1000) for i in xrange(times)] if rs == 0 else rs
     for i in range(0, times):
-    	print str(i) +" iteration of testAlgo"
+        print "\n###### \niteration of testAlgo number" + str(i+1) + "for" + clfName+ "\n###"
         cv = KFold(len(y), n_folds = folds, shuffle = True, random_state = rs[i])
         for train_index, test_index in cv:
-
             impr_clf, grids_score0, imp0 = fitAlgo(clf, X[train_index], y[train_index], opt, param_dict, opt_metric, n_iter)
             grids_score += grids_score0
             imp.append(imp0)
@@ -78,18 +78,22 @@ def fitAlgo(clf, Xtrain, Ytrain, opt = False, param_dict = None, opt_metric = 'r
     opt_metric - - optimization metric
     opt - - whether to do optimization or not
     '''
+
     if opt & (param_dict != None):
         assert(map(lambda x: isinstance(param_dict[x],list), param_dict))
-        rs = RandomizedSearchCV(estimator = clf, n_iter = n_iter,
+        N_iter = int(math.ceil(np.prod([math.pow(len(v),0.5) for x, v in param_dict.iteritems()] )* n_iter / 5))
+        print("Using N_iter = " + str(N_iter))
+        rs = RandomizedSearchCV(estimator = clf, n_iter = N_iter,
                                 param_distributions = param_dict,
                                 scoring = opt_metric,
                                 refit = True,
-                                n_jobs=-1, cv = 3, verbose = 3)
-
+                                n_jobs=-1, cv = 3, verbose = 1)
+        print("Simulation with num_features=", num_features)
+        print("max_features=", param_dict)
         rs.fit(Xtrain, Ytrain)
-        print "\n\n####### Optimal parameters: #########"
+        print "\n### Optimal parameters: ###"
         pprint(rs.best_params_)
-        print "############################## \n"
+        print "####################### \n"
 
         imp = []
         if clf.__class__.__name__ == "RandomForestClassifier":
@@ -145,37 +149,37 @@ def fill_2d(X, fill = np.nan):
 	return np.array(newX)
 
 
-def save_output(obj, X, y, featureNames,opt = True):
+def save_output(obj, X, y, featureNames,opt = True, n_CV = 10, n_iter = 5):
     '''Save Output (y_pred, y_true, grids_score, and imp) for this dataframe
     Keyword arguments:
     obj - - dataframe name
     X - - feature matrix
     y - - training target array
     opt - - whether to use parameter optimization, default is True
-	'''
-    rs = [np.random.randint(1,1000) for i in xrange(times)]
-    times = 10
+    '''
+    rs = [np.random.randint(1,1000) for i in xrange(n_CV)]
 
     for clfName in classifiers1.keys():
-    	clf = classifiers1[clfName]
-    	if opt:
-    		param_dict = param_dist_dict[clfName]
-    	else:
-    		param_dict = None
-    	# grids = grid_score_list
-    	y_pred, y_true, grids_score, imp = testAlgo(clf, X, y, clfName, featureNames, opt, param_dict, times = times, rs=rs)
-    	y_pred = fill_2d(y_pred)
-    	y_true = fill_2d(y_true)
-    	if opt:
-    		f = hp.File('./data/'+ obj + '/' + clfName + '_opt.h5', 'w')
-    	else:
-    		f = hp.File('./data/'+ obj + '/' + clfName + '_noopt.h5', 'w')
-    	print("Saving output for " + clfName)
-    	f.create_dataset('y_true', data = y_true)
-    	f.create_dataset('y_pred', data = y_pred)
-    	f.create_dataset('grids_score', data = grids_score)
-    	f.create_dataset('imp', data = imp)
-    	f.close()
+        clf = classifiers1[clfName]
+        if opt:
+            param_dict = param_dist_dict[clfName]
+            # print param_dict
+        else:
+            param_dict = None
+        # grids = grid_score_list
+        y_pred, y_true, grids_score, imp = testAlgo(clf, X, y, clfName, featureNames, opt, param_dict, times = n_CV, rs=rs, n_iter = n_iter)
+        y_pred = fill_2d(y_pred)
+        y_true = fill_2d(y_true)
+        if opt:
+            f = hp.File('./data/'+ obj + '/' + clfName + '_opt.h5', 'w')
+        else:
+            f = hp.File('./data/'+ obj + '/' + clfName + '_noopt.h5', 'w')
+        print("Saving output to file for " + clfName)
+        f.create_dataset('y_true', data = y_true)
+        f.create_dataset('y_pred', data = y_pred)
+        f.create_dataset('grids_score', data = grids_score)
+        f.create_dataset('imp', data = imp)
+        f.close()
 
 ### Plot results
 
@@ -682,26 +686,54 @@ def comp_obj_select():
 
 def save_output_select():
     '''
-    Choose dataset to generate y_pred, y_true, grids_score and imp
+    Choose dataset and parameters to generate y_pred, y_true, grids_score and imp
     '''
+    # Choose the datasets
     e = True
     while e:
         e = False
         print("Choose datasets from the following in a list format. e.g. ['Core', 'Core_Imp']")
         for obj in objs:
-        # Check whether the ouput data for obj has been generated
+            # Check whether the ouput data for obj has been generated
             if os.path.exists("./data/"+obj):
                 print(obj + "(related output has already been generated)")
             else:
                 print(obj)
-            choices = eval(raw_input())
+        cc = raw_input("--->")
+        choices = objs if cc == "" else eval(cc)
         for obj in choices:
             if obj not in objs:
                 print (obj + "No such dataset exists. Please type again the list of datasets... \n")
                 e = True
-    for obj in choices:
-        save_output_single(obj)
-
+    # launch the computations after a last switch:
+    cp = "bloup"
+    while cp not in ["", "Complicated"]:
+        cp = raw_input("Do you want to answer a lot of - useless ? - different questions for each dataset that forces you to stare at your terminal the whole time " +
+        "or would you prefer just to go on with the fitting of all the models for the sected datasets? \n (Answer 'Complicated' for the first option or just press return for the simple option)\n -->")
+    if cp == "Complicated":
+        for obj in objs:
+            save_output_single(obj)
+    else:
+        print("Last couple of questions:")
+        opt = raw_input("Do you want optimisation on all of the model fittings? (return or 'Y' for Yes) \n -->") in ["", "Yes", "Y"]
+        n_CV = raw_input("How many Cross-Validations should be done for the validation of the algorithms? (return for default = 10) \n -->")
+        n_CV = 10 if n_CV == "" else int(n_CV)
+        # if opt: #Not really relevant since the n_iter is now precomputed.
+        #     n_iter = raw_input("How many iteration should be done when optimizing the algorithms? (return for default = 5) \n -->")
+        #     n_iter = 5 if n_iter == "" else int(n_iter)
+        for obj in objs:
+            print ("Saving output for " + obj)
+            target = 'ModEDSS'
+            # global featureNames
+            X, y, featureNames = pred_prep(data_path, obj, target)
+            # global num_features
+            try:
+                num_features = X.shape[1]
+            except IndexError:
+                X = X.reshape(X.shape[0], 1)
+                num_features = 1
+            random_forest_params["max_features"] = range(2, num_features + 1)
+            save_output(obj, X, y, featureNames, opt = opt, n_CV=n_CV)
 
 def save_output_single(obj):
 	print ("Saving output for " + obj)
@@ -714,7 +746,7 @@ def save_output_single(obj):
 	except IndexError:
 		X = X.reshape(X.shape[0], 1)
 		num_features = 1
-	random_forest_params["max_features"] = range(1, num_features + 1)
+	random_forest_params["max_features"] = range(2, num_features + 1)
 	### Importances/ Coefficient of different params
 	plot_gaussian = raw_input("Plot Gaussian2 Fit? (Y/N)")
 	if plot_gaussian == "Y":
@@ -808,10 +840,10 @@ classifiers1 = {"LogisticRegression": LogisticRegression(),
 
 # dictionaries of different classifiers, these can be eyeballed from my parameter sweeping curve
 num_features = 6
-random_forest_params = {"n_estimators": range(50,300,50),
+random_forest_params = {"n_estimators": [50,100,200,300],
 			  "max_features": range(2, num_features + 1),
-			  "min_samples_split": range(2, 10),
-			  "min_samples_leaf": range(2, 10),
+			  "min_samples_split": [2, 3,4,6,8,10],
+			  "min_samples_leaf": [5,10,15],
 			  "bootstrap": [True, False],
 			  "criterion": ["gini", "entropy"]}
 # ['penalty', 'dual', 'tol', 'C', 'fit_intercept', 'intercept_scaling', 'class_weight', 'random_state']
@@ -842,7 +874,7 @@ svm_params = {"C": np.linspace(.1, 1, 10),
 				"shrinking":[True, False],
 				"tol":[1e-3,1e-4]}
 # ['fit_intercept', 'normalize', 'copy_X']
-linear_regression_params = {"fit_intercept":[True, False],
+linear_regression_params = {#"fit_intercept":[True, False], # False doesn't make sense here.
 					"normalize": [True, False]}
 # a dictionary storing the param_dist for different classifiers
 param_dist_dict = {"LogisticRegression": logistic_regression_params,
@@ -859,15 +891,17 @@ param_dist_dict = {"LogisticRegression": logistic_regression_params,
 				"BayesMixed2": bayesian_mixed2_params
 				}
 
+####### This part can be modified to fulfill different needs #####
+##AL put it outside of the main, cause it's used if imported too.
+global data_path
+data_path = './data/predData.h5'
+f = hp.File(data_path, 'r')
+global objs
+objs = [str(i) for i in f.keys()]
+f.close()
+
 def main():
     '''Some basic setup for prediction'''
-    ####### This part can be modified to fulfill different needs #####
-    global data_path
-    data_path = './data/predData.h5'
-    f = hp.File(data_path, 'r')
-    global objs
-    objs = [str(i) for i in f.keys()]
-    f.close()
     #########QUESTIONS################################################
     #
     option = raw_input("Launch Computation (a) or display result (b)? (a/b) ")
