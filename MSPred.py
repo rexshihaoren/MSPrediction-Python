@@ -424,6 +424,26 @@ def plotGridPref(gridscore, clfName, obj , metric = 'roc_auc'):
 				save_path = '../MSPrediction-Python/plots/'+obj+'/'+ clfName +'_' +metric+'_'+ i +'_'+ j+'.pdf'
 				fig.savefig(save_path)
 
+def compare_obj_sd(clfName, obj, y_pred, y_true, metric = 'roc_auc',folds = 10, times = 10, opt = True):
+	'''Compare different classifiers on single obj, plot mean and sd, based on times and folds'''
+	# for obj in datasets:
+	# 	data_path = './data/'+obj + '/'
+	# 	for clfName in models:
+	# 		if opt:
+	# 			data_path1 = data_path + clfName + '_opt.h5'
+	# 		else:
+	# 			data_path1 = data_path + clfName + '_noopt.h5'
+	mean_metric = []
+	for i in range(times):
+		y_true0 = y_true[i*folds: (i+1)*folds]
+		y_pred0 = y_pred[i*folds: (i+1)*folds]
+		if metric == 'roc_auc':
+			_, _, mean_metric0 = plot_roc(y_pred0, y_true0, clfName, obj, opt, save_sub = False)
+		else:
+			_, _, mean_metric0 = plot_roc(y_pred0, y_true0, clfName, obj, opt, save_sub = False)
+		mean_metric.append(mean_metric0)
+	return mean_metric
+
 def compare_obj(datasets = [], models = [], opt = True):
 	''' A function that takes a list of datasets and clfNames, so that it compare the model performance (roc_auc, and pr)
 	'''
@@ -436,6 +456,8 @@ def compare_obj(datasets = [], models = [], opt = True):
 			os.makedirs('plots/'+clfName)
 		mean_everything= {}
 		mean_everything1 = {}
+		roc_list = []
+		pr_list = []
 		clf = classifiers1[clfName]
 		param_dict = param_dist_dict[clfName]
 		for obj in datasets:
@@ -446,6 +468,12 @@ def compare_obj(datasets = [], models = [], opt = True):
 			# out pr results and plot folds
 			mean_rec, mean_prec, mean_auc1 = plot_pr(y_pred, y_true, clfName, obj, opt, save_sub = False)
 			mean_everything1[obj] = [mean_rec, mean_prec, mean_auc1]
+
+			# sd list
+			roc_list0 = compare_obj_sd(clfName, obj, y_pred, y_true, metric = 'roc_auc', opt= opt)
+			pr_list0 = compare_obj_sd(clfName, obj, y_pred, y_true, metric = 'pr', opt = opt)
+			roc_list.append(roc_list0)
+			pr_list.append(pr_list0)
 
 		# Compare mean roc score of all datasets with clf
 		fig = pl.figure(figsize=(8,6),dpi=150)
@@ -484,6 +512,34 @@ def compare_obj(datasets = [], models = [], opt = True):
 		else:
 			save_path = 'plots/'+clfName+'/'+'dataset_comparison_'+ dsls + 'pr' +'_noopt.pdf'
 		fig1.savefig(save_path)
+
+		# Compare sd score of all roc_auc
+		fig2 = pl.figure(figsize=(8,6),dpi=150)
+		roc_list = np.array(roc_list).T
+		mean_roc = np.mean(roc_list, axis = 0)
+		print "mean_roc", mean_roc
+		roc_sterr = np.std(roc_list, axis = 0)/np.sqrt(len(roc_list))
+		indices = np.argsort(mean_roc)[::-1]
+		print "indices", indices
+		dfList = []
+		num_df = len(datasets)
+		for i in range(num_df):
+			print i
+			dfList.append(datasets[indices[i]])
+	    	print("%d. dataset %s (%.2f)" % (i, datasets[indices[i]], mean_roc[indices[i]]))
+		pl.title("ROC_AUC SD",fontsize=30)
+		pl.errorbar(range(num_df), mean_roc[indices], yerr = roc_sterr[indices])
+		pl.xticks(range(num_df), dfList, size=15,rotation=90)
+		pl.ylabel("ROC_AUC",size=30)
+		pl.yticks(size=20)
+		pl.xlim([-1, num_df])
+		# fix_axes()
+		pl.tight_layout()
+		if opt:
+			save_path = 'plots/'+clfName+'/'+'dataset_sd_comp_'+ dsls + 'roc_auc' +'_opt.pdf'
+		else:
+			save_path = 'plots/'+clfName+'/'+'dataset_sd_comp_'+ dsls + 'roc_auc' +'_noopt.pdf'
+		fig2.savefig(save_path)
 
 ### Functions to analyze different models, plot importances for random forest, coefficients for logistic and linear regressions, and fit pdf plot for Bayes
 
@@ -671,7 +727,7 @@ def choose_clf(classifiers):
 
 def comp_obj_select():
 	print("Which following datasets do you wanna use?")
-	for i in classifiers1.keys():
+	for i in objs:
 		print i
 	s= raw_input("Please input in a list format, e.g. [\"Core\", \"Core_Imp\"]")
 	datasets = eval(s)
