@@ -34,8 +34,8 @@ def testAlgo(clf, X, y, clfName, featureNames, opt = False, param_dict = None, o
     imp = []
     rs = [np.random.randint(1,1000) for i in xrange(times)] if rs == 0 else rs
     for i in range(0, times):
-        print "\n###### \niteration of testAlgo number" + str(i+1) + "for" + clfName+ "\n###"
-        cv = KFold(len(y), n_folds = folds, shuffle = True, random_state = rs[i])
+        print "\n###### \CV of testAlgo number " + str(i+1) + " for " + clfName+ "\n###"
+        cv = StratifiedKFold(y, n_folds = folds, shuffle = True, random_state = rs[i])
         for train_index, test_index in cv:
             impr_clf, grids_score0, imp0 = fitAlgo(clf, X[train_index], y[train_index], opt, param_dict, opt_metric, n_iter)
             grids_score += grids_score0
@@ -51,15 +51,11 @@ def testAlgo(clf, X, y, clfName, featureNames, opt = False, param_dict = None, o
             y_true.append(y_true0)
     # Only rearange format if grids is not []
     if grids_score !=[]:
-        grids2 = grids_score
-		# stds = map(lambda x: x.__repr__().split(',')[1], grids)
-        fields = grids2[0][0].keys()+list(grids2[0]._fields)
-        fields.remove('parameters')
-        fields.remove('cv_validation_scores')
+        fields = grids_score[0].parameters.keys() + list(['mean_validation_score'])
         fields.append('std')
-        grids2 = map(lambda x: tuple(x[0].values()+[x[2].mean(),x[2].std()]),grids2)
+        grids2 = map(lambda x: tuple(x.parameters.values()+[x.mean_validation_score,x.cv_validation_scores.std()]),grids_score)
         datatype = [(fields[i], np.result_type(grids2[0][i]) if not isinstance(grids2[0][i], str) else '|S14') for i in range(0, len(fields))]
-        grids_score = np.array(grids2, datatype)
+        grids_score = np.array(grids2, dtype = datatype)
     else:
         grids_score = np.array([])
     if (clfName == 'RandomForest') & opt:
@@ -149,7 +145,7 @@ def fill_2d(X, fill = np.nan):
 	return np.array(newX)
 
 
-def save_output(obj, X, y, featureNames,opt = True, n_CV = 10, n_iter = 5):
+def save_output(obj, X, y, featureNames, opt = True, n_CV = 10, n_iter = 5):
     '''Save Output (y_pred, y_true, grids_score, and imp) for this dataframe
     Keyword arguments:
     obj - - dataframe name
@@ -170,6 +166,7 @@ def save_output(obj, X, y, featureNames,opt = True, n_CV = 10, n_iter = 5):
         y_pred, y_true, grids_score, imp = testAlgo(clf, X, y, clfName, featureNames, opt, param_dict, times = n_CV, rs=rs, n_iter = n_iter)
         y_pred = fill_2d(y_pred)
         y_true = fill_2d(y_true)
+        res_table = getTable(y_pred, y_true, n_CV, n_folds = 10)
         if opt:
             f = hp.File('./data/'+ obj + '/' + clfName + '_opt.h5', 'w')
         else:
@@ -179,7 +176,23 @@ def save_output(obj, X, y, featureNames,opt = True, n_CV = 10, n_iter = 5):
         f.create_dataset('y_pred', data = y_pred)
         f.create_dataset('grids_score', data = grids_score)
         f.create_dataset('imp', data = imp)
+        f.create_dataset('fullPredictionTable', data = res_table)
         f.close()
+
+def getTableOneLinerForFun(y_pred, y_true, n_CV, n_folds = 10):
+    return np.vstack([np.column_stack((y_pred[i_CV*n_folds + i_fold], y_true[i_CV*n_folds + i_fold], [i_CV]*len(y_pred[i_CV*n_folds + i_fold]), [i_fold]*len(y_pred[i_CV*n_folds + i_fold]))) for i_CV in range(n_CV) for i_fold in range(n_folds)])
+
+def getTable(y_pred, y_true, n_CV, n_folds = 10): #Cleaner
+    res = []
+    for i_CV in range(n_CV) :
+        for i_fold in range(n_folds):
+            index_i = i_CV*n_folds + i_fold
+            y_pred_i = y_pred[index_i]
+            y_true_i = y_true[index_i]
+            l_i = len(y_pred_i)
+            res.append(np.column_stack((y_pred_i, y_true_i, [i_CV]*l_i, [i_fold]*l_i)))
+
+    return np.vstack(res)
 
 ### Plot results
 
