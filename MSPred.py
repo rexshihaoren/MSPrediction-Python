@@ -77,7 +77,7 @@ def fitAlgo(clf, Xtrain, Ytrain, opt = False, param_dict = None, opt_metric = 'r
 
     if opt & (param_dict != None):
         assert(map(lambda x: isinstance(param_dict[x],list), param_dict))
-        N_iter = int(math.ceil(np.prod([math.pow(len(v),0.5) for x, v in param_dict.iteritems()] )* n_iter / 5))
+        N_iter = int(math.ceil(np.prod([math.pow(len(v),0.5) for x, v in param_dict.iteritems()] )* n_iter / 5) * 1.5)
         print("Using N_iter = " + str(N_iter))
         if n_iter != 0:
             rs = gd.RandomizedSearchCV(estimator = clf, n_iter = N_iter,
@@ -178,7 +178,7 @@ def save_output(obj, X, y, featureNames, opt = True, n_CV = 10, n_iter = 5, scal
         res_table = getTable(y_pred, y_true, n_CV, n_folds = 10)
         optString = '_opt' if opt else '_noopt'
         scalingString = '_scaled' if scaling else ''
-            f = hp.File('./data/'+ obj + '/' + clfName + optString + scalingString + '.h5', 'w')
+        f = hp.File('./data/'+ obj + '/' + clfName + optString + scalingString + '.h5', 'w')
         print("Saving output to file for " + clfName)
         f.create_dataset('y_true', data = y_true)
         f.create_dataset('y_pred', data = y_pred)
@@ -921,8 +921,8 @@ classifiers1 = {"LogisticRegression": LogisticRegression(),
 num_features = 6
 random_forest_params = {"n_estimators": [50,100,200,300],
 			  "max_features": range(2, num_features + 1),
-			  "min_samples_split": [2, 3,4,6,8,10],
-			  "min_samples_leaf": [5,10,15],
+			  # "min_samples_split": [2, 3,4,6,8,10],
+			  # "min_samples_leaf": [5,10,15],
 			  "bootstrap": [True, False],
 			  "criterion": ["gini", "entropy"]}
 # ['penalty', 'dual', 'tol', 'C', 'fit_intercept', 'intercept_scaling', 'class_weight', 'random_state']
@@ -937,8 +937,8 @@ knn_params= {"n_neighbors":range(1,6),
 				"leaf_size":range(25,30),
 				"p":range(1,3)}
 # ['alpha', 'binarize', 'fit_prior', 'class_prior']
-bayesian_bernoulli_params= {"alpha": np.linspace(.1, 1, 10),
-				"binarize": np.linspace(.1, 1, 10)}
+bayesian_bernoulli_params= {"alpha": np.linspace(.1, 1, 11),
+				"binarize": np.linspace(.1, 1, 11)}
 # ['alpha', 'binarize', 'fit_prior', 'class_prior']
 bayesian_multi_params= {"alpha": np.linspace(.1, 1, 10)}
 # ['alpha', 'binarize', 'fit_prior', 'class_prior']
