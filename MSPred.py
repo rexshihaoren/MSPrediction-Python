@@ -6,7 +6,7 @@ import math as M
 from termcolor import colored
 from scipy.interpolate import griddata
 from sklearn.cross_validation import StratifiedShuffleSplit, ShuffleSplit, StratifiedKFold, KFold
-from sklearn import metrics
+from sklearn import metrics, preprocessing
 from sklearn.metrics import roc_curve, auc, average_precision_score, precision_recall_curve
 from naive_bayes import BernoulliNB, GaussianNB, GaussianNB2, MultinomialNB, PoissonNB, MixNB, MixNB2
 from sklearn.linear_model import LogisticRegression, LinearRegression
@@ -16,7 +16,7 @@ from sklearn.ensemble import RandomForestClassifier
 from matplotlib.mlab import rec_drop_fields
 from matplotlib import cm
 from inspect import getargspec
-from sklearn.grid_search import RandomizedSearchCV
+import sklearn.grid_search as gd
 import os
 import re
 from sklearn import preprocessing
@@ -64,7 +64,7 @@ def testAlgo(clf, X, y, clfName, featureNames, opt = False, param_dict = None, o
     return y_pred, y_true, grids_score, imp
 
 # Evaluation pipeline:
-def fitAlgo(clf, Xtrain, Ytrain, opt = False, param_dict = None, opt_metric = 'roc_auc', n_iter = 5):
+def fitAlgo(clf, Xtrain, Ytrain, opt = False, param_dict = None, opt_metric = 'roc_auc', n_iter = 5, n_optFolds = 3):
     '''Return the fitted classifier
     Keyword arguments:
     clf - - base classifier
@@ -79,13 +79,20 @@ def fitAlgo(clf, Xtrain, Ytrain, opt = False, param_dict = None, opt_metric = 'r
         assert(map(lambda x: isinstance(param_dict[x],list), param_dict))
         N_iter = int(math.ceil(np.prod([math.pow(len(v),0.5) for x, v in param_dict.iteritems()] )* n_iter / 5))
         print("Using N_iter = " + str(N_iter))
-        rs = RandomizedSearchCV(estimator = clf, n_iter = N_iter,
-                                param_distributions = param_dict,
-                                scoring = opt_metric,
-                                refit = True,
-                                n_jobs=-1, cv = 3, verbose = 1)
-        print("Simulation with num_features=", num_features)
-        print("max_features=", param_dict)
+        if n_iter != 0:
+            rs = gd.RandomizedSearchCV(estimator = clf, n_iter = N_iter,
+                                    param_distributions = param_dict,
+                                    scoring = opt_metric,
+                                    refit = True,
+                                    n_jobs=-1, cv = n_optFolds, verbose = 1)
+        else:
+            rs = gd.GridSearchCV(estimator = clf,
+                                    param_grid = param_dict,
+                                    scoring = opt_metric,
+                                    refit = True,
+                                    n_jobs=-1, cv = n_optFolds, verbose = 1)
+        print "Simulation with num_features=", num_features
+        print "max_features=",  param_dict
         rs.fit(Xtrain, Ytrain)
         print "\n### Optimal parameters: ###"
         pprint(rs.best_params_)
@@ -131,7 +138,6 @@ def pred_prep(data_path, obj, target):
 	y = dataset[target]
 	newdataset = dataset[featureNames]
 	X = newdataset.view((np.float64, len(newdataset.dtype.names)))
-	# X = preprocessing.scale(X)
 	y = y.view((np.float64, 1))
 	return X, y, featureNames
 
@@ -145,7 +151,7 @@ def fill_2d(X, fill = np.nan):
 	return np.array(newX)
 
 
-def save_output(obj, X, y, featureNames, opt = True, n_CV = 10, n_iter = 5):
+def save_output(obj, X, y, featureNames, opt = True, n_CV = 10, n_iter = 5, scaling = False):
     '''Save Output (y_pred, y_true, grids_score, and imp) for this dataframe
     Keyword arguments:
     obj - - dataframe name
@@ -154,6 +160,9 @@ def save_output(obj, X, y, featureNames, opt = True, n_CV = 10, n_iter = 5):
     opt - - whether to use parameter optimization, default is True
     '''
     rs = [np.random.randint(1,1000) for i in xrange(n_CV)]
+
+    if scaling:
+        X = preprocessing.scale(X)
 
     for clfName in classifiers1.keys():
         clf = classifiers1[clfName]
@@ -167,10 +176,9 @@ def save_output(obj, X, y, featureNames, opt = True, n_CV = 10, n_iter = 5):
         y_pred = fill_2d(y_pred)
         y_true = fill_2d(y_true)
         res_table = getTable(y_pred, y_true, n_CV, n_folds = 10)
-        if opt:
-            f = hp.File('./data/'+ obj + '/' + clfName + '_opt.h5', 'w')
-        else:
-            f = hp.File('./data/'+ obj + '/' + clfName + '_noopt.h5', 'w')
+        optString = '_opt' if opt else '_noopt'
+        scalingString = '_scaled' if scaling else ''
+            f = hp.File('./data/'+ obj + '/' + clfName + optString + scalingString + '.h5', 'w')
         print("Saving output to file for " + clfName)
         f.create_dataset('y_true', data = y_true)
         f.create_dataset('y_pred', data = y_pred)
@@ -787,9 +795,11 @@ def save_output_select():
         opt = raw_input("Do you want optimisation on all of the model fittings? (return or 'Y' for Yes) \n -->") in ["", "Yes", "Y"]
         n_CV = raw_input("How many Cross-Validations should be done for the validation of the algorithms? (return for default = 10) \n -->")
         n_CV = 10 if n_CV == "" else int(n_CV)
+        b_scaling = raw_input("Do you want to scale the imput data? (return or 'Y' for Yes) \n -->") in ["", "Yes", "Y"]
         # if opt: #Not really relevant since the n_iter is now precomputed.
         #     n_iter = raw_input("How many iteration should be done when optimizing the algorithms? (return for default = 5) \n -->")
         #     n_iter = 5 if n_iter == "" else int(n_iter)
+
         for obj in objs:
             print ("Saving output for " + obj)
             target = 'ModEDSS'
@@ -802,7 +812,7 @@ def save_output_select():
                 X = X.reshape(X.shape[0], 1)
                 num_features = 1
             random_forest_params["max_features"] = range(2, num_features + 1)
-            save_output(obj, X, y, featureNames, opt = opt, n_CV=n_CV)
+            save_output(obj, X, y, featureNames, opt = opt, n_CV=n_CV, scaling = b_scaling)
 
 def save_output_single(obj):
 	print ("Saving output for " + obj)
@@ -938,10 +948,10 @@ bayesian_poisson_params = None
 bayesian_mixed_params = None
 bayesian_mixed2_params = None
 # ['C', 'kernel', 'degree', 'gamma', 'coef0', 'shrinking', 'probability', 'tol', 'cache_size', 'class_weight', 'verbose', 'max_iter', 'random_state']
-svm_params = {"C": np.linspace(.1, 1, 10),
-				"kernel":['linear','poly','rbf'],
-				"shrinking":[True, False],
-				"tol":[1e-3,1e-4]}
+svm_params = {
+    "C" : [0.1,0.3,1,1000,10000],
+    "kernel": ["linear", "rbf", "poly"]
+}
 # ['fit_intercept', 'normalize', 'copy_X']
 linear_regression_params = {#"fit_intercept":[True, False], # False doesn't make sense here.
 					"normalize": [True, False]}
