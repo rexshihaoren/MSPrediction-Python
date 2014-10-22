@@ -77,7 +77,10 @@ def fitAlgo(clf, Xtrain, Ytrain, opt = False, param_dict = None, opt_metric = 'r
 
     if opt & (param_dict != None):
         assert(map(lambda x: isinstance(param_dict[x],list), param_dict))
-        N_iter = int(math.ceil(np.prod([math.pow(len(v),0.5) for x, v in param_dict.iteritems()] )* n_iter / 5) * 1.5)
+        prod_feature_05 =np.prod([math.pow(len(v),0.5) for x, v in param_dict.iteritems()])
+        prod_feature =np.prod([len(v) for x, v in param_dict.iteritems()])
+        N_iter = int(np.ceil(prod_feature_05* n_iter / 5 * 1.5))
+        N_iter = N_iter if N_iter < prod_feature else prod_feature
         print("Using N_iter = " + str(N_iter))
         if n_iter != 0:
             rs = gd.RandomizedSearchCV(estimator = clf, n_iter = N_iter,
@@ -927,10 +930,10 @@ random_forest_params = {"n_estimators": [50,100,200,300],
 			  "criterion": ["gini", "entropy"]}
 # ['penalty', 'dual', 'tol', 'C', 'fit_intercept', 'intercept_scaling', 'class_weight', 'random_state']
 logistic_regression_params = {"penalty":['l1','l2'],
-					"C": np.linspace(.1, 1, 10),
-					"fit_intercept":[True, False],
-					"intercept_scaling":np.linspace(.1, 1, 10),
-					"tol":[1e-4, 1e-5, 1e-6]}
+					"C": np.linspace(.1, 1, 11),
+					"fit_intercept":[True],#, False],
+					"intercept_scaling":np.linspace(.1, 1, 11),
+					"tol":[1e-4, 1e-5]}#, 1e-6]}
 # ['n_neighbors', 'weights', 'algorithm', 'leaf_size', 'p', 'metric']
 knn_params= {"n_neighbors":range(1,6),
 				"algorithm":['auto', 'ball_tree', 'kd_tree'],
@@ -949,8 +952,8 @@ bayesian_mixed_params = None
 bayesian_mixed2_params = None
 # ['C', 'kernel', 'degree', 'gamma', 'coef0', 'shrinking', 'probability', 'tol', 'cache_size', 'class_weight', 'verbose', 'max_iter', 'random_state']
 svm_params = {
-    "C" : [0.1,0.3,1,1000,10000],
-    "kernel": ["linear", "rbf", "poly"]
+    "C" : [0.1,0.3,1,3,10000],
+    "kernel": ["linear", "poly"] #'rbf'
 }
 # ['fit_intercept', 'normalize', 'copy_X']
 linear_regression_params = {#"fit_intercept":[True, False], # False doesn't make sense here.
