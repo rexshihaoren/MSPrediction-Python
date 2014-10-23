@@ -471,6 +471,8 @@ def compare_obj(datasets = [], models = [], opt = True):
     dsls = ''
     for i in datasets:
         dsls += (i+'_')
+    mean_sd_roc_auc = {}
+    mean_sd_pr = {}
     for clfName in models:
         # Make sure "plots/clfName" exists
         if not os.path.exists('plots/'+clfName):
@@ -534,61 +536,104 @@ def compare_obj(datasets = [], models = [], opt = True):
             save_path = 'plots/'+clfName+'/'+'dataset_comparison_'+ dsls + 'pr' +'_noopt.pdf'
         fig1.savefig(save_path)
 
-        # Compare sd score of all roc_auc
-        fig2 = pl.figure(figsize=(8,6),dpi=150)
-        roc_list = np.array(roc_list).T
-        mean_roc = np.mean(roc_list, axis = 0)
-        print "mean_roc", mean_roc
-        roc_sterr = np.std(roc_list, axis = 0)/np.sqrt(len(roc_list))
-        indices = np.argsort(mean_roc)[::-1]
-        print "indices", indices
-        dfList = []
-        num_df = len(datasets)
-        for i in range(num_df):
-            print i
-            dfList.append(datasets[indices[i]])
-            print("%d. dataset %s (%.2f)" % (i, datasets[indices[i]], mean_roc[indices[i]]))
-        pl.title("ROC_AUC SD",fontsize=30)
-        pl.errorbar(range(num_df), mean_roc[indices], yerr = roc_sterr[indices])
-        pl.xticks(range(num_df), dfList, size=15,rotation=90)
-        pl.ylabel("ROC_AUC",size=30)
-        pl.yticks(size=20)
-        pl.xlim([-1, num_df])
-        # fix_axes()
-        pl.tight_layout()
-        if opt:
-            save_path = 'plots/'+clfName+'/'+'dataset_sd_comp_'+ dsls + 'roc_auc' +'_opt.pdf'
-        else:
-            save_path = 'plots/'+clfName+'/'+'dataset_sd_comp_'+ dsls + 'roc_auc' +'_noopt.pdf'
-        fig2.savefig(save_path)
+        # # Compare sd score of all roc_auc
+        # fig2 = pl.figure(figsize=(8,6),dpi=150)
+        # roc_list = np.array(roc_list).T
+        # mean_roc = np.mean(roc_list, axis = 0)
+        # print "mean_roc", mean_roc
+        # roc_sterr = np.std(roc_list, axis = 0)/np.sqrt(len(roc_list))
+        # indices = np.argsort(mean_roc)[::-1]
+        # print "indices", indices
+        # dfList = []
+        # num_df = len(datasets)
+        # for i in range(num_df):
+        #     print i
+        #     dfList.append(datasets[indices[i]])
+        #     print("%d. dataset %s (%.2f)" % (i, datasets[indices[i]], mean_roc[indices[i]]))
+        # pl.title("ROC_AUC SD",fontsize=30)
+        # pl.errorbar(range(num_df), mean_roc[indices], yerr = roc_sterr[indices])
+        # pl.xticks(range(num_df), dfList, size=15,rotation=90)
+        # pl.ylabel("ROC_AUC",size=30)
+        # pl.yticks(size=20)
+        # pl.xlim([-1, num_df])
+        # # fix_axes()
+        # pl.tight_layout()
+        # if opt:
+        #     save_path = 'plots/'+clfName+'/'+'dataset_sd_comp_'+ dsls + 'roc_auc' +'_opt.pdf'
+        # else:
+        #     save_path = 'plots/'+clfName+'/'+'dataset_sd_comp_'+ dsls + 'roc_auc' +'_noopt.pdf'
+        # fig2.savefig(save_path)
 
-        # Compare sd score of all prs
-        fig3 = pl.figure(figsize=(8,6),dpi=150)
-        pr_list = np.array(pr_list).T
-        mean_pr = np.mean(pr_list, axis = 0)
-        print "mean_pr", mean_pr
-        pr_sterr = np.std(pr_list, axis = 0)/np.sqrt(len(pr_list))
-        indices = np.argsort(mean_pr)[::-1]
+        # # Compare sd score of all prs
+        # fig3 = pl.figure(figsize=(8,6),dpi=150)
+        # pr_list = np.array(pr_list).T
+        # mean_pr = np.mean(pr_list, axis = 0)
+        # print "mean_pr", mean_pr
+        # pr_sterr = np.std(pr_list, axis = 0)/np.sqrt(len(pr_list))
+        # indices = np.argsort(mean_pr)[::-1]
+        # print "indices", indices
+        # dfList = []
+        # num_df = len(datasets)
+        # for i in range(num_df):
+        #     print i
+        #     dfList.append(datasets[indices[i]])
+        #     print("%d. dataset %s (%.2f)" % (i, datasets[indices[i]], mean_pr[indices[i]]))
+        # pl.title("PR SD",fontsize=30)
+        # pl.errorbar(range(num_df), mean_pr[indices], yerr = pr_sterr[indices])
+        # pl.xticks(range(num_df), dfList, size=15,rotation=90)
+        # pl.ylabel("PR",size=30)
+        # pl.yticks(size=20)
+        # pl.xlim([-1, num_df])
+        # # fix_axes()
+        # pl.tight_layout()
+        # if opt:
+        #     save_path = 'plots/'+clfName+'/'+'dataset_sd_comp_'+ dsls + 'pr' +'_opt.pdf'
+        # else:
+        #     save_path = 'plots/'+clfName+'/'+'dataset_sd_comp_'+ dsls + 'pr' +'_noopt.pdf'
+        # fig3.savefig(save_path)
+
+
+        # store sd score of all roc_auc of all clfs
+        mean_sd_roc_auc[clfName] = roc_list
+        # store sd score of all prs of all clfs
+        mean_sd_pr[clfName] = pr_list
+    plot_sd(mean_sd_roc_auc, datasets, metric = 'roc_auc', opt)
+    plot_sd(mean_sd_pr, datasets, metric = 'pr', opt)
+
+
+def plot_sd(mean_sd, datasets, metric = 'roc_auc', opt):
+    ''' Plot sd plot with every clfs of different color, comparing performance of different objs
+    '''
+    # number of dataframes in question
+    num_df = len(datasets)
+    fig = pl.figure(figsize=(8,6),dpi=150)
+    for clfname in mean_sd:
+        metric_list = mean_sd[clfName]
+        metric_list = np.array(metric_list).T
+        mean_metric = np.mean(metric_list, axis = 0)
+        print "mean_"+metric, mean_metric
+        metric_sterr = np.std(metric_list, axis = 0)/np.sqrt(len(metric_list))
+        indices = np.argsort(mean_metric)[::-1]
         print "indices", indices
         dfList = []
-        num_df = len(datasets)
         for i in range(num_df):
             print i
             dfList.append(datasets[indices[i]])
-            print("%d. dataset %s (%.2f)" % (i, datasets[indices[i]], mean_pr[indices[i]]))
-        pl.title("PR SD",fontsize=30)
-        pl.errorbar(range(num_df), mean_pr[indices], yerr = pr_sterr[indices])
-        pl.xticks(range(num_df), dfList, size=15,rotation=90)
-        pl.ylabel("PR",size=30)
-        pl.yticks(size=20)
-        pl.xlim([-1, num_df])
-        # fix_axes()
-        pl.tight_layout()
-        if opt:
-            save_path = 'plots/'+clfName+'/'+'dataset_sd_comp_'+ dsls + 'pr' +'_opt.pdf'
-        else:
-            save_path = 'plots/'+clfName+'/'+'dataset_sd_comp_'+ dsls + 'pr' +'_noopt.pdf'
-        fig3.savefig(save_path)
+            print("%d. dataset %s (%.2f)" % (i, datasets[indices[i]], mean_metric[indices[i]]))
+        pl.title(metric.upper() + "SD",fontsize=30)
+        pl.errorbar(range(num_df), mean_metric[indices], yerr = metric_sterr[indices], label = clfName)
+    pl.xticks(range(num_df), dfList, size=15,rotation=90)
+    pl.ylabel(metric.upper(),size=30)
+    pl.yticks(size=20)
+    pl.xlim([-1, num_df])
+    # fix_axes()
+    pl.tight_layout()
+    if opt:
+        save_path = 'plots/'+'dataset_sd_comp_'+ dsls + metric +'_opt.pdf'
+    else:
+        save_path = 'plots/'+'dataset_sd_comp_'+ dsls + metric +'_noopt.pdf'
+    fig.savefig(save_path)
+
 
 ### Functions to analyze different models, plot importances for random forest, coefficients for logistic and linear regressions, and fit pdf plot for Bayes
 
@@ -800,7 +845,7 @@ def save_output_select():
         print("Choose datasets from the following in a list format. e.g. ['Core', 'Core_Imp']")
         for obj in objs:
             # Check whether the ouput data for obj has been generated
-            if os.path.exists("./data/"+obj):
+            if os.path.exists("+ "/"+obj):
                 print(obj + "(related output has already been generated)")
             else:
                 print(obj)
@@ -910,6 +955,7 @@ def com_clf_select():
     for obj in objs:
         # Check whether the ouput data for obj has been generated
         if os.path.exists("./data/"+obj):
+        # if os.path.exists(data_path + "/" + obj):
             print(obj)
     obj = raw_input('Which dataset would you choose from above list?')
     while obj not in existobjs:
@@ -1002,6 +1048,11 @@ param_dist_dict = {"LogisticRegression": logistic_regression_params,
 ##AL put it outside of the main, cause it's used if imported too.
 global data_path
 data_path = './data/predData.h5'
+# global h5name
+# h5name = ' '
+# global data_path, h5_path
+# data_path = ' '
+# h5_path = ' '
 f = hp.File(data_path, 'r')
 global objs
 objs = [str(i) for i in f.keys()]
@@ -1013,6 +1064,11 @@ def main():
     #
     option = raw_input("Launch Computation (a) or display result (b)? (a/b) ")
     if (option == 'a'):
+        # h5name = " "
+        # while h5name not in ["PredData", "PredData_Impr0-4"]
+        #     h5name = raw_input("Which h5 file? (PredData or PredData_Impr0-4)")
+        # data_path = './' + h5name + '/data'
+        # h5_path = './' + h5name + '/' + h5name + '.h5'
         save_output_select()
     else:
     # Compre datasets
