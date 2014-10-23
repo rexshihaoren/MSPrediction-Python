@@ -178,7 +178,7 @@ def save_output(obj, X, y, featureNames, opt = True, n_CV = 10, n_iter = 5, scal
         res_table = getTable(y_pred, y_true, n_CV, n_folds = 10)
         optString = '_opt' if opt else '_noopt'
         scalingString = '_scaled' if scaling else ''
-            f = hp.File('./data/'+ obj + '/' + clfName + optString + scalingString + '.h5', 'w')
+        f = hp.File('./data/'+ obj + '/' + clfName + optString + scalingString + '.h5', 'w')
         print("Saving output to file for " + clfName)
         f.create_dataset('y_true', data = y_true)
         f.create_dataset('y_pred', data = y_pred)
@@ -561,6 +561,34 @@ def compare_obj(datasets = [], models = [], opt = True):
         else:
             save_path = 'plots/'+clfName+'/'+'dataset_sd_comp_'+ dsls + 'roc_auc' +'_noopt.pdf'
         fig2.savefig(save_path)
+
+        # Compare sd score of all prs
+        fig3 = pl.figure(figsize=(8,6),dpi=150)
+        pr_list = np.array(pr_list).T
+        mean_pr = np.mean(pr_list, axis = 0)
+        print "mean_pr", mean_pr
+        pr_sterr = np.std(pr_list, axis = 0)/np.sqrt(len(pr_list))
+        indices = np.argsort(mean_pr)[::-1]
+        print "indices", indices
+        dfList = []
+        num_df = len(datasets)
+        for i in range(num_df):
+            print i
+            dfList.append(datasets[indices[i]])
+            print("%d. dataset %s (%.2f)" % (i, datasets[indices[i]], mean_pr[indices[i]]))
+        pl.title("PR SD",fontsize=30)
+        pl.errorbar(range(num_df), mean_pr[indices], yerr = pr_sterr[indices])
+        pl.xticks(range(num_df), dfList, size=15,rotation=90)
+        pl.ylabel("PR",size=30)
+        pl.yticks(size=20)
+        pl.xlim([-1, num_df])
+        # fix_axes()
+        pl.tight_layout()
+        if opt:
+            save_path = 'plots/'+clfName+'/'+'dataset_sd_comp_'+ dsls + 'pr' +'_opt.pdf'
+        else:
+            save_path = 'plots/'+clfName+'/'+'dataset_sd_comp_'+ dsls + 'pr' +'_noopt.pdf'
+        fig3.savefig(save_path)
 
 ### Functions to analyze different models, plot importances for random forest, coefficients for logistic and linear regressions, and fit pdf plot for Bayes
 
