@@ -33,12 +33,13 @@ def testAlgo(clf, X, y, clfName, featureNames, opt = False, param_dict = None, o
     grids_score = []
     imp = []
     rs = [np.random.randint(1,1000) for i in xrange(times)] if rs == 0 else rs
-    for i in range(0, times):
-        print "\n###### \CV of testAlgo number " + str(i+1) + " for " + clfName+ "\n###"
-        cv = StratifiedKFold(y, n_folds = folds, shuffle = True, random_state = rs[i])
+    for i_CV in range(0, times):
+        print "\n###### \CV of testAlgo number " + str(i_CV+1) + " for " + clfName+ "\n###"
+        cv = StratifiedKFold(y, n_folds = folds, shuffle = True, random_state = rs[i_CV])
+        i_fold = 0
         for train_index, test_index in cv:
             impr_clf, grids_score0, imp0 = fitAlgo(clf, X[train_index], y[train_index], opt, param_dict, opt_metric, n_iter)
-            grids_score += grids_score0
+            grids_score += [[i_CV, i_fold, grids_score0]]
             imp.append(imp0)
             if (clfName != "LinearRegression"):
                 proba = impr_clf.predict_proba(X[test_index])
@@ -49,19 +50,27 @@ def testAlgo(clf, X, y, clfName, featureNames, opt = False, param_dict = None, o
             y_true0 = y[test_index]
             y_pred.append(y_pred0)
             y_true.append(y_true0)
+            i_fold += 1
     # Only rearange format if grids is not []
+    grid_score_final = []
     if grids_score !=[]:
-        fields = grids_score[0].parameters.keys() + list(['mean_validation_score'])
+        fields = grids_score[0][2][0].parameters.keys() + list(['mean_validation_score'])
         fields.append('std')
-        grids2 = map(lambda x: tuple(x.parameters.values()+[x.mean_validation_score,x.cv_validation_scores.std()]),grids_score)
-        datatype = [(fields[i], np.result_type(grids2[0][i]) if not isinstance(grids2[0][i], str) else '|S14') for i in range(0, len(fields))]
-        grids_score = np.array(grids2, dtype = datatype)
+        l_i = len(grids_score[0][2])
+        for grids_score_i in grids_score:
+            i_CV = grids_score_i[0]
+            i_fold = grids_score_i[1]
+            grids2_i = map(lambda x: tuple([i_CV, i_fold] + x.parameters.values()+[x.mean_validation_score,x.cv_validation_scores.std()]),grids_score_i[2])
+            datatype = [((['i_CV', 'i_fold'] + fields)[i], np.result_type(grids2_i[0][i]) if not isinstance(grids2_i[0][i], str) else '|S14') for i in range(0, len(fields)+2)]
+            grid_score_final_i = np.array(grids2_i, dtype = datatype)
+            grid_score_final.append(grid_score_final_i)
+        grid_score_final = np.concatenate(grid_score_final)
     else:
-        grids_score = np.array([])
+        grid_score_final = np.array([])
     if (clfName == 'RandomForest') & opt:
     	imp = np.vstack(imp)
     	imp = imp.view(dtype=[(i, 'float64') for i in featureNames]).reshape(len(imp),)
-    return y_pred, y_true, grids_score, imp
+    return y_pred, y_true, grid_score_final, imp
 
 # Evaluation pipeline:
 def fitAlgo(clf, Xtrain, Ytrain, opt = False, param_dict = None, opt_metric = 'roc_auc', n_iter = 5, n_optFolds = 3):
@@ -154,7 +163,7 @@ def fill_2d(X, fill = np.nan):
 	return np.array(newX)
 
 
-def save_output(obj, X, y, featureNames, opt = True, n_CV = 10, n_iter = 5, scaling = False):
+def save_output(obj, X, y, featureNames, opt = True, n_CV = 10, n_iter = 10, scaling = False):
     '''Save Output (y_pred, y_true, grids_score, and imp) for this dataframe
     Keyword arguments:
     obj - - dataframe name
