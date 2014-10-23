@@ -247,7 +247,7 @@ def compare_clf(clfs, obj, metric = 'roc_auc', opt = False, n_iter=4, folds=4, t
             plot_importances(imp,clfName, obj)
         # Because if opt = Flase, grids_score should be []
         if len(grids_score)>0:
-            plotGridPref(grids_score, clfName, obj, metric)
+            plotGridPref(grids_score, clfName, obj, metric, n_iter)
         # output roc results and plot folds
         mean_fpr, mean_tpr, mean_auc = plot_roc(y_pred, y_true, clfName, obj, opt)
         mean_everything[clfName] = [mean_fpr, mean_tpr, mean_auc]
@@ -401,7 +401,7 @@ def plot_unit_prep(y_pred, y_true, metric, plotfold = False):
     mean_area = auc(mean_x,mean_y)
     return mean_x, mean_y, mean_area
 
-def plotGridPref(gridscore, clfName, obj , metric = 'roc_auc'):
+def plotGridPref(gridscore, clfName, obj , metric = 'roc_auc', n_iter):
     ''' Plot Grid Performance
     '''
     # data_path = 'data/'+obj+'/'+clfName+'_opt.h5'
@@ -442,6 +442,16 @@ def plotGridPref(gridscore, clfName, obj , metric = 'roc_auc'):
                 pl.ylabel(j, fontsize = 30)
                 cb = pl.colorbar()
                 cb.set_label(metric, fontsize = 30)
+             	##### Mark the "hit" points #######
+				numblock = len(score)/n_iter
+				hitindex = []
+				for i in range(numbock):
+				    hit0index = argmax(score[i*5: (i+1)*5])
+				    hitindex.apend(hit0index )
+				hitx = x[hitindex]
+				hity = y[hitindex]
+				pl.plot(hitx, hity, marker='x', color='r')
+				# Save the plot
                 save_path = '../MSPrediction-Python/plots/'+obj+'/'+ clfName +'_' +metric+'_'+ i +'_'+ j+'.pdf'
                 fig.savefig(save_path)
 
@@ -642,7 +652,7 @@ def plot_importances(imp, clfName, obj):
     # imp=np.vstack(imp)
     imp = imp.view(np.float64).reshape(imp.shape + (-1,))
     mean_importance = np.mean(imp,axis=0)
-    std_importance = np.std(imp,axis=0)
+    std_importance = np.st@d(imp,axis=0)
     indices = np.argsort(mean_importance)[::-1]
     print indices
     print featureNames
