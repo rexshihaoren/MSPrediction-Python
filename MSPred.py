@@ -452,16 +452,16 @@ def plotGridPref(gridscore, clfName, obj , metric = 'roc_auc', n_iter):
                 pl.ylabel(j, fontsize = 30)
                 cb = pl.colorbar()
                 cb.set_label(metric, fontsize = 30)
-             	##### Mark the "hit" points #######
-				numblock = len(score)/n_iter
-				hitindex = []
-				for i in range(numbock):
-				    hit0index = argmax(score[i*5: (i+1)*5])
-				    hitindex.apend(hit0index )
-				hitx = x[hitindex]
-				hity = y[hitindex]
-				pl.plot(hitx, hity, marker='x', color='r')
-				# Save the plot
+                ##### Mark the "hit" points #######
+                numblock = len(score)/n_iter
+                hitindex = []
+                for i in range(numbock):
+                    hit0index = argmax(score[i*5: (i+1)*5])
+                    hitindex.apend(hit0index )
+                hitx = x[hitindex]
+                hity = y[hitindex]
+                pl.plot(hitx, hity, marker='x', color='r')
+                # Save the plot
                 save_path = plot_path +obj+'/'+ clfName +'_' +metric+'_'+ i +'_'+ j+'.pdf'
                 fig.savefig(save_path)
 
@@ -928,10 +928,10 @@ def path_finder():
     h5_path = './' + h5name + '/' + h5name + '.h5'
     data_path = general_path + 'data/'
     plot_path = general_path + 'plots/'
-	f = hp.File(h5_path, 'r')
-	global objs
-	objs = [str(i) for i in f.keys()]
-	f.close()
+    f = hp.File(h5_path, 'r')
+    global objs
+    objs = [str(i) for i in f.keys()]
+    f.close()
 
 
 ######## Global Parameters #######
@@ -965,16 +965,16 @@ classifiers1 = {"LogisticRegression": LogisticRegression(),
 num_features = 6
 random_forest_params = {"n_estimators": [50,100,200,300],
               "max_features": range(2, num_features + 1),
-			  # "min_samples_split": [2, 3,4,6,8,10],
-			  # "min_samples_leaf": [5,10,15],
+              # "min_samples_split": [2, 3,4,6,8,10],
+              # "min_samples_leaf": [5,10,15],
               "bootstrap": [True, False],
               "criterion": ["gini", "entropy"]}
 # ['penalty', 'dual', 'tol', 'C', 'fit_intercept', 'intercept_scaling', 'class_weight', 'random_state']
 logistic_regression_params = {"penalty":['l1','l2'],
-					"C": np.linspace(.1, 1, 11),
-					"fit_intercept":[True],#, False],
-					"intercept_scaling":np.linspace(.1, 1, 11),
-					"tol":[1e-4, 1e-5]}#, 1e-6]}
+                    "C": np.linspace(.1, 1, 11),
+                    "fit_intercept":[True],#, False],
+                    "intercept_scaling":np.linspace(.1, 1, 11),
+                    "tol":[1e-4, 1e-5]}#, 1e-6]}
 # ['n_neighbors', 'weights', 'algorithm', 'leaf_size', 'p', 'metric']
 knn_params= {"n_neighbors":range(1,6),
                 "algorithm":['auto', 'ball_tree', 'kd_tree'],
@@ -982,7 +982,7 @@ knn_params= {"n_neighbors":range(1,6),
                 "p":range(1,3)}
 # ['alpha', 'binarize', 'fit_prior', 'class_prior']
 bayesian_bernoulli_params= {"alpha": np.linspace(.1, 1, 11),
-				"binarize": np.linspace(.1, 1, 11)}
+                "binarize": np.linspace(.1, 1, 11)}
 # ['alpha', 'binarize', 'fit_prior', 'class_prior']
 bayesian_multi_params= {"alpha": np.linspace(.1, 1, 10)}
 # ['alpha', 'binarize', 'fit_prior', 'class_prior']
