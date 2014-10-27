@@ -128,19 +128,19 @@ def fitAlgo(clf, Xtrain, Ytrain, opt = False, param_dict = None, opt_metric = 'r
 ###### Meta-functions #######
 
 ### Prepare data
-def pred_prep(data_path, obj, target):
+def pred_prep(h5_path, obj, target):
     '''A generalized method that could return the desired X and y, based on the file path of the data, the name of the obj, and the target column we are trying to predict.
     Keyword Arguments:
-        data_path: the data path
+        h5_path: the data path for h5 file
         obj: name of the dataset
         target: the target column name
     '''
     # Make sure "data/obj" and "plots/obj" exist
-    if not os.path.exists('data/'+obj):
-        os.makedirs('data/'+obj)
-    if not os.path.exists('plots/'+obj):
-        os.makedirs('plots/'+obj)
-    f=hp.File(data_path, 'r+')
+    if not os.path.exists(data_path+obj):
+        os.makedirs(data_path+obj)
+    if not os.path.exists(plot_path+obj):
+        os.makedirs(data_path+obj)
+    f=hp.File(h5_path, 'r+')
     dataset = f[obj].value
     f.close()
     # Convert Everything to float for easier calculation
@@ -190,7 +190,7 @@ def save_output(obj, X, y, featureNames, opt = True, n_CV = 10, n_iter = 10, sca
         res_table = getTable(y_pred, y_true, n_CV, n_folds = 10)
         optString = '_opt' if opt else '_noopt'
         scalingString = '_scaled' if scaling else ''
-        f = hp.File('./data/'+ obj + '/' + clfName + optString + scalingString + '.h5', 'w')
+        f = hp.File(data_path + obj + '/' + clfName + optString + scalingString + '.h5', 'w')
         print("Saving output to file for " + clfName)
         f.create_dataset('y_true', data = y_true)
         f.create_dataset('y_pred', data = y_pred)
@@ -228,12 +228,12 @@ def open_output(clfName, obj, opt):
         grids_score
         imp
     '''
-    data_path = './data/'+obj + '/'
+    data_path0 = data_path +obj + '/'
     print("Open output for " + clfName)
     if opt:
-        data_path1 = data_path + clfName + '_opt.h5'
+        data_path1 = data_path0 + clfName + '_opt.h5'
     else:
-        data_path1 = data_path + clfName + '_noopt.h5'
+        data_path1 = data_path0 + clfName + '_noopt.h5'
     f = hp.File(data_path1, 'r')
     y_pred = f['y_pred'].value
     y_pred = map(lambda x: x[~np.isnan(x)], y_pred)
@@ -249,8 +249,6 @@ def compare_clf(clfs, obj, metric = 'roc_auc', opt = False, n_iter=4, folds=4, t
     '''Compare classifiers with mean roc_auc'''
     mean_everything= {}
     mean_everything1 = {}
-    # Data path for this dataframe
-    data_path = './data/'+obj + '/'
     for clfName in clfs.keys():
         print clfName
         y_pred, y_true, grids_score, imp = open_output(clfName, obj, opt)
@@ -280,9 +278,9 @@ def compare_clf(clfs, obj, metric = 'roc_auc', opt = False, n_iter=4, folds=4, t
     pl.legend(loc='lower right')
     pl.tight_layout()
     if opt:
-        save_path = 'plots/'+obj+'/'+'clf_comparison_'+ 'roc_auc' +'_opt.pdf'
+        save_path = plot_path +obj+'/'+'clf_comparison_'+ 'roc_auc' +'_opt.pdf'
     else:
-        save_path = 'plots/'+obj+'/'+'clf_comparison_'+ 'roc_auc' +'_noopt.pdf'
+        save_path = plot_path +obj+'/'+'clf_comparison_'+ 'roc_auc' +'_noopt.pdf'
     fig.savefig(save_path)
     # Compare pr score of all clfs
     fig1 = pl.figure(figsize=(8,6),dpi=150)
@@ -298,9 +296,9 @@ def compare_clf(clfs, obj, metric = 'roc_auc', opt = False, n_iter=4, folds=4, t
     pl.legend(loc='lower right')
     pl.tight_layout()
     if opt:
-        save_path = 'plots/'+obj+'/'+'clf_comparison_'+ 'pr' +'_opt.pdf'
+        save_path = plot_path +obj+'/'+'clf_comparison_'+ 'pr' +'_opt.pdf'
     else:
-        save_path = 'plots/'+obj+'/'+'clf_comparison_'+ 'pr' +'_noopt.pdf'
+        save_path = plot_path +obj+'/'+'clf_comparison_'+ 'pr' +'_noopt.pdf'
     fig1.savefig(save_path)
 
 def clf_plot(obj, clfName, opt, featureNames):
@@ -311,10 +309,10 @@ def clf_plot(obj, clfName, opt, featureNames):
         clfName: classifier name
     '''
     if opt:
-        datapath = 'data/'+obj+'/'+clfName+'_opt.h5'
+        datapath = data_path +obj+'/'+clfName+'_opt.h5'
     else:
-        datapath = 'data/'+obj+'/'+clfName+'_noopt.h5'
-    f=hp.File(data_path, 'r+')
+        datapath = data_path +obj+'/'+clfName+'_noopt.h5'
+    f=hp.File(datapath, 'r+')
     y_pred = f['y_pred'].value
     y_true = f['y_true'].value
     imp = f['imp'].value
@@ -345,9 +343,9 @@ def plot_roc(y_pred, y_true, clfName, obj, opt, save_sub = True):
     pl.legend(loc="lower right")
     pl.tight_layout()
     if opt:
-        save_path = 'plots/'+obj+'/'+clfName+'_roc_opt.pdf'
+        save_path = plot_path +obj+'/'+clfName+'_roc_opt.pdf'
     else:
-        save_path = 'plots/'+obj+'/'+clfName+'_roc_noopt.pdf'
+        save_path = plot_path +obj+'/'+clfName+'_roc_noopt.pdf'
     if save_sub:
         fig.savefig(save_path)
     # pl.show()
@@ -367,9 +365,9 @@ def plot_pr(y_pred, y_true,clfName, obj, opt, save_sub = True):
     pl.title('Precision-Recall: AUC=%0.2f' % mean_auc)
     pl.legend(loc="lower left")
     if opt:
-        save_path = 'plots/'+obj+'/'+clfName+'_pr_opt.pdf'
+        save_path = plot_path +obj+'/'+clfName+'_pr_opt.pdf'
     else:
-        save_path = 'plots/'+obj+'/'+clfName+'_pr_noopt.pdf'
+        save_path = plot_path +obj+'/'+clfName+'_pr_noopt.pdf'
     if save_sub:
         fig.savefig(save_path)
     # pl.show()
@@ -464,18 +462,11 @@ def plotGridPref(gridscore, clfName, obj , metric = 'roc_auc', n_iter):
 				hity = y[hitindex]
 				pl.plot(hitx, hity, marker='x', color='r')
 				# Save the plot
-                save_path = '../MSPrediction-Python/plots/'+obj+'/'+ clfName +'_' +metric+'_'+ i +'_'+ j+'.pdf'
+                save_path = plot_path +obj+'/'+ clfName +'_' +metric+'_'+ i +'_'+ j+'.pdf'
                 fig.savefig(save_path)
 
 def compare_obj_sd(clfName, obj, y_pred, y_true, metric = 'roc_auc',folds = 10, times = 10, opt = True):
     '''Compare different classifiers on single obj, plot mean and sd, based on times and folds'''
-    # for obj in datasets:
-    #   data_path = './data/'+obj + '/'
-    #   for clfName in models:
-    #       if opt:
-    #           data_path1 = data_path + clfName + '_opt.h5'
-    #       else:
-    #           data_path1 = data_path + clfName + '_noopt.h5'
     mean_metric = []
     for i in range(times):
         y_true0 = y_true[i*folds: (i+1)*folds]
@@ -497,8 +488,8 @@ def compare_obj(datasets = [], models = [], opt = True):
     mean_sd_pr = {}
     for clfName in models:
         # Make sure "plots/clfName" exists
-        if not os.path.exists('plots/'+clfName):
-            os.makedirs('plots/'+clfName)
+        if not os.path.exists(plot_path + clfName):
+            os.makedirs(plot_path + clfName)
         mean_everything= {}
         mean_everything1 = {}
         roc_list = []
@@ -534,9 +525,9 @@ def compare_obj(datasets = [], models = [], opt = True):
         pl.legend(loc='lower right')
         pl.tight_layout()
         if opt:
-            save_path = 'plots/'+clfName+'/'+'dataset_comparison_'+ dsls + 'roc_auc' +'_opt.pdf'
+            save_path = plot_path +clfName+'/'+'dataset_comparison_'+ dsls + 'roc_auc' +'_opt.pdf'
         else:
-            save_path = 'plots/'+clfName+'/'+'dataset_comparison_'+ dsls + 'roc_auc' +'_noopt.pdf'
+            save_path = plot_path +clfName+'/'+'dataset_comparison_'+ dsls + 'roc_auc' +'_noopt.pdf'
         fig.savefig(save_path)
 
         # Compare pr score of all clfs
@@ -553,68 +544,10 @@ def compare_obj(datasets = [], models = [], opt = True):
         pl.legend(loc='lower right')
         pl.tight_layout()
         if opt:
-            save_path = 'plots/'+clfName+'/'+'dataset_comparison_'+ dsls + 'pr' +'_opt.pdf'
+            save_path = plot_path +clfName+'/'+'dataset_comparison_'+ dsls + 'pr' +'_opt.pdf'
         else:
-            save_path = 'plots/'+clfName+'/'+'dataset_comparison_'+ dsls + 'pr' +'_noopt.pdf'
+            save_path = plot_path +clfName+'/'+'dataset_comparison_'+ dsls + 'pr' +'_noopt.pdf'
         fig1.savefig(save_path)
-
-        # # Compare sd score of all roc_auc
-        # fig2 = pl.figure(figsize=(8,6),dpi=150)
-        # roc_list = np.array(roc_list).T
-        # mean_roc = np.mean(roc_list, axis = 0)
-        # print "mean_roc", mean_roc
-        # roc_sterr = np.std(roc_list, axis = 0)/np.sqrt(len(roc_list))
-        # indices = np.argsort(mean_roc)[::-1]
-        # print "indices", indices
-        # dfList = []
-        # num_df = len(datasets)
-        # for i in range(num_df):
-        #     print i
-        #     dfList.append(datasets[indices[i]])
-        #     print("%d. dataset %s (%.2f)" % (i, datasets[indices[i]], mean_roc[indices[i]]))
-        # pl.title("ROC_AUC SD",fontsize=30)
-        # pl.errorbar(range(num_df), mean_roc[indices], yerr = roc_sterr[indices])
-        # pl.xticks(range(num_df), dfList, size=15,rotation=90)
-        # pl.ylabel("ROC_AUC",size=30)
-        # pl.yticks(size=20)
-        # pl.xlim([-1, num_df])
-        # # fix_axes()
-        # pl.tight_layout()
-        # if opt:
-        #     save_path = 'plots/'+clfName+'/'+'dataset_sd_comp_'+ dsls + 'roc_auc' +'_opt.pdf'
-        # else:
-        #     save_path = 'plots/'+clfName+'/'+'dataset_sd_comp_'+ dsls + 'roc_auc' +'_noopt.pdf'
-        # fig2.savefig(save_path)
-
-        # # Compare sd score of all prs
-        # fig3 = pl.figure(figsize=(8,6),dpi=150)
-        # pr_list = np.array(pr_list).T
-        # mean_pr = np.mean(pr_list, axis = 0)
-        # print "mean_pr", mean_pr
-        # pr_sterr = np.std(pr_list, axis = 0)/np.sqrt(len(pr_list))
-        # indices = np.argsort(mean_pr)[::-1]
-        # print "indices", indices
-        # dfList = []
-        # num_df = len(datasets)
-        # for i in range(num_df):
-        #     print i
-        #     dfList.append(datasets[indices[i]])
-        #     print("%d. dataset %s (%.2f)" % (i, datasets[indices[i]], mean_pr[indices[i]]))
-        # pl.title("PR SD",fontsize=30)
-        # pl.errorbar(range(num_df), mean_pr[indices], yerr = pr_sterr[indices])
-        # pl.xticks(range(num_df), dfList, size=15,rotation=90)
-        # pl.ylabel("PR",size=30)
-        # pl.yticks(size=20)
-        # pl.xlim([-1, num_df])
-        # # fix_axes()
-        # pl.tight_layout()
-        # if opt:
-        #     save_path = 'plots/'+clfName+'/'+'dataset_sd_comp_'+ dsls + 'pr' +'_opt.pdf'
-        # else:
-        #     save_path = 'plots/'+clfName+'/'+'dataset_sd_comp_'+ dsls + 'pr' +'_noopt.pdf'
-        # fig3.savefig(save_path)
-
-
         # store sd score of all roc_auc of all clfs
         mean_sd_roc_auc[clfName] = roc_list
         # store sd score of all prs of all clfs
@@ -651,9 +584,9 @@ def plot_sd(mean_sd, datasets, metric = 'roc_auc', opt):
     # fix_axes()
     pl.tight_layout()
     if opt:
-        save_path = 'plots/'+'dataset_sd_comp_'+ dsls + metric +'_opt.pdf'
+        save_path = plot_path +'dataset_sd_comp_'+ dsls + metric +'_opt.pdf'
     else:
-        save_path = 'plots/'+'dataset_sd_comp_'+ dsls + metric +'_noopt.pdf'
+        save_path = plot_path +'dataset_sd_comp_'+ dsls + metric +'_noopt.pdf'
     fig.savefig(save_path)
 
 
@@ -685,13 +618,13 @@ def plot_importances(imp, clfName, obj):
     pl.xlim([-1, num_features])
     # fix_axes()
     pl.tight_layout()
-    save_path = 'plots/'+obj+'/'+clfName+'_feature_importances.pdf'
+    save_path = plot_path +obj+'/'+clfName+'_feature_importances.pdf'
     fig.savefig(save_path)
 
 def plotGaussian(X, y, obj, featureNames):
     """Plot Gausian fit on top of X.
     """
-    save_path = '../MSPrediction-Python/plots/'+obj+'/'+'BayesGaussian2'
+    save_path = plot_path +obj+'/'+'BayesGaussian2'
     clf = classifiers["BayesGaussian2"]
     clf,_,_ = fitAlgo(clf, X,y, opt= True, param_dict = param_dist_dict["BayesGaussian2"])
     unique_y = np.unique(y)
@@ -727,7 +660,7 @@ def plotGaussian(X, y, obj, featureNames):
 def plotMixNB(X, y, obj, featureNames, whichMix):
     """Plot MixNB fit on top of X.
     """
-    save_path = '../MSPrediction-Python/plots/'+obj+'/'+whichMix
+    save_path = plot_path +obj+'/'+whichMix
     clf = classifiers[whichMix]
     clf,_,_ = fitAlgo(clf, X,y, opt= True, param_dict = param_dist_dict[whichMix])
     unique_y = np.unique(y)
@@ -785,7 +718,7 @@ def plotCoeff(X, y, obj, featureNames, whichReg):
     pl.yticks(size=20)
     pl.xlim([-1, num_features])
     pl.tight_layout()
-    save_path = 'plots/'+obj+'/'+whichReg+'_feature_importances.pdf'
+    save_path = plot_path + obj+'/'+whichReg+'_feature_importances.pdf'
     fig.savefig(save_path)
 
 def param_sweeping(clf, obj, X, y, param_dist, metric, param, clfName):
@@ -818,7 +751,7 @@ def param_sweeping(clf, obj, X, y, param_dist, metric, param, clfName):
     pl.title('Parameter Sweeping Curve',fontsize=25)
     pl.legend(loc='lower right')
     pl.tight_layout()
-    fig.savefig('plots/'+obj+'/'+ clfName +'_' + param +'_'+'ps.pdf')
+    fig.savefig(plot_path + obj+'/'+ clfName +'_' + param +'_'+'ps.pdf')
     pl.show()
 
 ### Question Helpers ###
@@ -867,7 +800,7 @@ def save_output_select():
         print("Choose datasets from the following in a list format. e.g. ['Core', 'Core_Imp']")
         for obj in objs:
             # Check whether the ouput data for obj has been generated
-            if os.path.exists("+ "/"+obj):
+            if os.path.exists(general_path + 'data/' + obj):
                 print(obj + "(related output has already been generated)")
             else:
                 print(obj)
@@ -899,7 +832,7 @@ def save_output_select():
             print ("Saving output for " + obj)
             target = 'ModEDSS'
             # global featureNames
-            X, y, featureNames = pred_prep(data_path, obj, target)
+            X, y, featureNames = pred_prep(h5_path, obj, target)
             # global num_features
             try:
                 num_features = X.shape[1]
@@ -913,7 +846,7 @@ def save_output_single(obj):
     print ("Saving output for " + obj)
     target = 'ModEDSS'
     # global featureNames
-    X, y, featureNames = pred_prep(data_path, obj, target)
+    X, y, featureNames = pred_prep(h5_path, obj, target)
     # global num_features
     try:
         num_features = X.shape[1]
@@ -984,6 +917,21 @@ def com_clf_select():
         obj = raw_input('Which dataset would you choose from above list?')
     com_clf_opt = raw_input ("With optimization? (Y/N)")
     compare_clf(classifiers1, obj, metric = 'roc_auc', opt = (com_clf_opt == 'Y'))
+
+
+def path_finder():
+    h5name = " "
+    while h5name not in ["PredData", "PredData_Impr0-4"]:
+        h5name = raw_input("Which h5 file? do you want to use (PredData or PredData_Impr0-4)")
+    global general_path, h5_path, data_path, plot_path
+    general_path = './' + h5name + '/'
+    h5_path = './' + h5name + '/' + h5name + '.h5'
+    data_path = general_path + 'data/'
+    plot_path = general_path + 'plots/'
+	f = hp.File(h5_path, 'r')
+	global objs
+	objs = [str(i) for i in f.keys()]
+	f.close()
 
 
 ######## Global Parameters #######
@@ -1066,31 +1014,13 @@ param_dist_dict = {"LogisticRegression": logistic_regression_params,
                 "BayesMixed2": bayesian_mixed2_params
                 }
 
-####### This part can be modified to fulfill different needs #####
-##AL put it outside of the main, cause it's used if imported too.
-global data_path
-data_path = './data/predData.h5'
-# global h5name
-# h5name = ' '
-# global data_path, h5_path
-# data_path = ' '
-# h5_path = ' '
-f = hp.File(data_path, 'r')
-global objs
-objs = [str(i) for i in f.keys()]
-f.close()
-
 def main():
     '''Some basic setup for prediction'''
     #########QUESTIONS################################################
-    #
+    # Ask which h5 file to use (PredData or PredData_Impr0-4)
+    path_finder()
     option = raw_input("Launch Computation (a) or display result (b)? (a/b) ")
     if (option == 'a'):
-        # h5name = " "
-        # while h5name not in ["PredData", "PredData_Impr0-4"]
-        #     h5name = raw_input("Which h5 file? (PredData or PredData_Impr0-4)")
-        # data_path = './' + h5name + '/data'
-        # h5_path = './' + h5name + '/' + h5name + '.h5'
         save_output_select()
     else:
     # Compre datasets
