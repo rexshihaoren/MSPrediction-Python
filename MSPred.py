@@ -465,7 +465,7 @@ def plotGridPref(gridscore, clfName, obj , n_iter, metric = 'roc_auc'):
                 save_path = plot_path +obj+'/'+ clfName +'_' +metric+'_'+ i +'_'+ j+'.pdf'
                 fig.savefig(save_path)
 
-def compare_obj_sd(clfName, obj, y_pred, y_true, metric = 'roc_auc',folds = 10, times = 10, opt = True):
+def compare_obj_sd(clfName, obj, y_pred, y_true, metric = 'roc_auc',folds = 2, times = 10, opt = True):
     '''Compare different classifiers on single obj, plot mean and sd, based on times and folds'''
     mean_metric = []
     for i in range(times):
@@ -559,10 +559,13 @@ def compare_obj(datasets = [], models = [], opt = True):
 def plot_sd(mean_sd, datasets, metric, opt):
     ''' Plot sd plot with every clfs of different color, comparing performance of different objs
     '''
+    dsls = ''
+    for i in datasets:
+        dsls += (i+'_')
     # number of dataframes in question
     num_df = len(datasets)
     fig = pl.figure(figsize=(8,6),dpi=150)
-    for clfname in mean_sd:
+    for clfName in mean_sd:
         metric_list = mean_sd[clfName]
         metric_list = np.array(metric_list).T
         mean_metric = np.mean(metric_list, axis = 0)
@@ -579,6 +582,7 @@ def plot_sd(mean_sd, datasets, metric, opt):
         pl.errorbar(range(num_df), mean_metric[indices], yerr = metric_sterr[indices], label = clfName)
     pl.xticks(range(num_df), dfList, size=15,rotation=90)
     pl.ylabel(metric.upper(),size=30)
+    pl.legend(loc='lower right')
     pl.yticks(size=20)
     pl.xlim([-1, num_df])
     # fix_axes()
@@ -911,6 +915,7 @@ def com_clf_select():
         # Check whether the ouput data for obj has been generated
         if os.path.exists("./data/"+obj):
         # if os.path.exists(data_path + "/" + obj):
+            existobjs.append(obj)
             print(obj)
     obj = raw_input('Which dataset would you choose from above list?')
     while obj not in existobjs:
