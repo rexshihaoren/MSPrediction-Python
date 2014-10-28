@@ -53,7 +53,7 @@ def testAlgo(clf, X, y, clfName, featureNames, opt = False, param_dict = None, o
             i_fold += 1
     # Only rearange format if grids is not []
     grid_score_final = []
-    if grids_score !=[]:
+    if grids_score[0][2] !=[]:
         fields = grids_score[0][2][0].parameters.keys() + list(['mean_validation_score'])
         fields.append('std')
         l_i = len(grids_score[0][2])
@@ -139,7 +139,7 @@ def pred_prep(h5_path, obj, target):
     if not os.path.exists(data_path+obj):
         os.makedirs(data_path+obj)
     if not os.path.exists(plot_path+obj):
-        os.makedirs(data_path+obj)
+        os.makedirs(plot_path+obj)
     f=hp.File(h5_path, 'r+')
     dataset = f[obj].value
     f.close()
@@ -163,7 +163,7 @@ def fill_2d(X, fill = np.nan):
     return np.array(newX)
 
 
-def save_output(obj, X, y, featureNames, opt = True, n_CV = 10, n_iter = 10, scaling = False):
+def save_output(obj, X, y, featureNames, opt = True, n_CV = 10, n_iter = 2, scaling = False):
     '''Save Output (y_pred, y_true, grids_score, and imp) for this dataframe
     Keyword arguments:
     obj - - dataframe name
@@ -257,7 +257,7 @@ def compare_clf(clfs, obj, metric = 'roc_auc', opt = False, n_iter=4, folds=4, t
             plot_importances(imp,clfName, obj)
         # Because if opt = Flase, grids_score should be []
         if len(grids_score)>0:
-            plotGridPref(grids_score, clfName, obj, metric, n_iter)
+            plotGridPref(grids_score, clfName, obj, n_iter, metric)
         # output roc results and plot folds
         mean_fpr, mean_tpr, mean_auc = plot_roc(y_pred, y_true, clfName, obj, opt)
         mean_everything[clfName] = [mean_fpr, mean_tpr, mean_auc]
@@ -411,7 +411,7 @@ def plot_unit_prep(y_pred, y_true, metric, plotfold = False):
     mean_area = auc(mean_x,mean_y)
     return mean_x, mean_y, mean_area
 
-def plotGridPref(gridscore, clfName, obj , metric = 'roc_auc', n_iter):
+def plotGridPref(gridscore, clfName, obj , n_iter, metric = 'roc_auc'):
     ''' Plot Grid Performance
     '''
     # data_path = 'data/'+obj+'/'+clfName+'_opt.h5'
@@ -552,11 +552,11 @@ def compare_obj(datasets = [], models = [], opt = True):
         mean_sd_roc_auc[clfName] = roc_list
         # store sd score of all prs of all clfs
         mean_sd_pr[clfName] = pr_list
-    plot_sd(mean_sd_roc_auc, datasets, metric = 'roc_auc', opt)
-    plot_sd(mean_sd_pr, datasets, metric = 'pr', opt)
+    plot_sd(mean_sd_roc_auc, datasets, 'roc_auc', opt)
+    plot_sd(mean_sd_pr, datasets, 'pr', opt)
 
 
-def plot_sd(mean_sd, datasets, metric = 'roc_auc', opt):
+def plot_sd(mean_sd, datasets, metric, opt):
     ''' Plot sd plot with every clfs of different color, comparing performance of different objs
     '''
     # number of dataframes in question
@@ -597,7 +597,7 @@ def plot_importances(imp, clfName, obj):
     # imp=np.vstack(imp)
     imp = imp.view(np.float64).reshape(imp.shape + (-1,))
     mean_importance = np.mean(imp,axis=0)
-    std_importance = np.st@d(imp,axis=0)
+    std_importance = np.std(imp,axis=0)
     indices = np.argsort(mean_importance)[::-1]
     print indices
     print featureNames
