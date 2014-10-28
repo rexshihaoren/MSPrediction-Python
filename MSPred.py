@@ -414,17 +414,29 @@ def plot_unit_prep(y_pred, y_true, metric, plotfold = False):
 def plotGridPref(gridscore, clfName, obj , n_iter, metric = 'roc_auc'):
     ''' Plot Grid Performance
     '''
-    # data_path = 'data/'+obj+'/'+clfName+'_opt.h5'
+    # data_path = data_path+obj+'/'+clfName+'_opt.h5'
     # f=hp.File(data_path, 'r')
     # gridscore = f['grids_score'].value
+    # Get numblocks
+    CV = np.unique(gridscore["i_CV"])
+    folds = np.unique(gridscore["i_fold"])
+    numblocks = len(CV) * len(folds)
     paramNames = gridscore.dtype.fields.keys()
     paramNames.remove("mean_validation_score")
     paramNames.remove("std")
+    paramNames.remove("i_CV")
+    paramNames.remove("i_fold")
     score = gridscore["mean_validation_score"]
     std = gridscore["std"]
     newgridscore = gridscore[paramNames]
-    # for i in paramNames:
     num_params = len(paramNames)
+    ### get index of hit ###
+    hitindex = []
+    n_iter = len(score)/numblocks
+    for k in range(numblocks):
+        hit0index = np.argmax(score[k*n_iter: (k+1)*n_iter])
+        hitindex.append(k*n_iter+hit0index )
+
     for m in range(num_params-1):
         i = paramNames[m]
         x = newgridscore[i]
@@ -453,14 +465,9 @@ def plotGridPref(gridscore, clfName, obj , n_iter, metric = 'roc_auc'):
                 cb = pl.colorbar()
                 cb.set_label(metric, fontsize = 30)
                 ##### Mark the "hit" points #######
-                numblock = len(score)/n_iter
-                hitindex = []
-                for i in range(numbock):
-                    hit0index = argmax(score[i*5: (i+1)*5])
-                    hitindex.apend(hit0index )
                 hitx = x[hitindex]
                 hity = y[hitindex]
-                pl.plot(hitx, hity, marker='x', color='r')
+                pl.plot(hitx, hity, 'rx')
                 # Save the plot
                 save_path = plot_path +obj+'/'+ clfName +'_' +metric+'_'+ i +'_'+ j+'.pdf'
                 fig.savefig(save_path)
