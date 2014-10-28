@@ -816,7 +816,7 @@ def save_output_select():
         cp = raw_input("Do you want to answer a lot of - useless ? - different questions for each dataset that forces you to stare at your terminal the whole time " +
         "or would you prefer just to go on with the fitting of all the models for the sected datasets? \n (Answer 'Complicated' for the first option or just press return for the simple option)\n -->")
     if cp == "Complicated":
-        for obj in objs:
+        for obj in choices:
             save_output_single(obj)
     else:
         print("Last couple of questions:")
@@ -828,7 +828,7 @@ def save_output_select():
         #     n_iter = raw_input("How many iteration should be done when optimizing the algorithms? (return for default = 5) \n -->")
         #     n_iter = 5 if n_iter == "" else int(n_iter)
 
-        for obj in objs:
+        for obj in choices:
             print ("Saving output for " + obj)
             target = 'ModEDSS'
             # global featureNames
@@ -951,16 +951,20 @@ classifiers = {"LogisticRegression": LogisticRegression(),
                     "BayesMixed2": MixNB2()
                     }
 # Classifiers actually considered
+# classifiers1 = {"LogisticRegression": LogisticRegression(),
+#                     "BayesBernoulli": BernoulliNB(),
+#                     "BayesGaussian": GaussianNB(),
+#                     "BayesGaussian2":GaussianNB2(),
+#                     "RandomForest": RandomForestClassifier(),
+#                     "LinearRegression": LinearRegression(),
+#                     "BayesMixed": MixNB(),
+#                     "BayesMixed2": MixNB2()
+#                     }
+# Only for local testing at Rex's machine
 classifiers1 = {"LogisticRegression": LogisticRegression(),
-                    "BayesBernoulli": BernoulliNB(),
-                    "BayesGaussian": GaussianNB(),
-                    "BayesGaussian2":GaussianNB2(),
                     "RandomForest": RandomForestClassifier(),
-                    "LinearRegression": LinearRegression(),
-                    "BayesMixed": MixNB(),
                     "BayesMixed2": MixNB2()
                     }
-
 # dictionaries of different classifiers, these can be eyeballed from my parameter sweeping curve
 num_features = 6
 random_forest_params = {"n_estimators": [50,100,200,300],
