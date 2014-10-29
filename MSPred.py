@@ -53,7 +53,8 @@ def testAlgo(clf, X, y, clfName, featureNames, opt = False, param_dict = None, o
             i_fold += 1
     # Only rearange format if grids is not []
     grid_score_final = []
-    if grids_score[0][2] !=[]:
+    print grids_score
+    if grids_score[0][2] != []:
         fields = grids_score[0][2][0].parameters.keys() + list(['mean_validation_score'])
         fields.append('std')
         l_i = len(grids_score[0][2])
@@ -834,6 +835,8 @@ def save_output_select():
         opt = raw_input("Do you want optimisation on all of the model fittings? (return or 'Y' for Yes) \n -->") in ["", "Yes", "Y"]
         n_CV = raw_input("How many Cross-Validations should be done for the validation of the algorithms? (return for default = 10) \n -->")
         n_CV = 10 if n_CV == "" else int(n_CV)
+        n_iter = raw_input("How many iterations should be done to optimize parameters? (return for default = 5) \n -->")
+        n_iter = 5 if n_iter == "" else int(n_iter)
         b_scaling = raw_input("Do you want to scale the imput data? (return or 'Y' for Yes) \n -->") in ["", "Yes", "Y"]
         # if opt: #Not really relevant since the n_iter is now precomputed.
         #     n_iter = raw_input("How many iteration should be done when optimizing the algorithms? (return for default = 5) \n -->")
@@ -851,7 +854,7 @@ def save_output_select():
                 X = X.reshape(X.shape[0], 1)
                 num_features = 1
             random_forest_params["max_features"] = range(2, num_features + 1)
-            save_output(obj, X, y, featureNames, opt = opt, n_CV=n_CV, scaling = b_scaling)
+            save_output(obj, X, y, featureNames, opt = opt, n_CV=n_CV, scaling = b_scaling, n_iter=n_iter)
 
 def save_output_single(obj):
     print ("Saving output for " + obj)
@@ -933,8 +936,9 @@ def com_clf_select():
 
 def path_finder():
     h5name = " "
-    while h5name not in ["PredData", "PredData_Impr0-4"]:
-        h5name = raw_input("Which h5 file? do you want to use (PredData or PredData_Impr0-4)")
+    h5names =  ["predData", "predData_Impr0-4"]
+    while h5name not in h5names:
+        h5name = raw_input("Which h5 file? do you want to use (predData or predData_Impr0-4)")
     global general_path, h5_path, data_path, plot_path
     general_path = './' + h5name + '/'
     h5_path = './' + h5name + '/' + h5name + '.h5'
