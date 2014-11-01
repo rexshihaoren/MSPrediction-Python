@@ -9,7 +9,7 @@ from scipy.stats import chisquare, itemfreq
 from scipy.optimize import fmin, fmin_bfgs, fminbound
 import EnjoyLifePred as ELP
 from statsmodels.discrete.discrete_model import Poisson as pois
-from sklearn.naive_bayes import BernoulliNB, GaussianNB, GaussianNB2, MultinomialNB, PoissonNB, MixNB
+from naive_bayes import BernoulliNB, GaussianNB, GaussianNB2, MultinomialNB, PoissonNB, MixNB
 import os
 os.environ['R_HOME'] = "/opt/local/Library/Frameworks/R.framework/Resources"
 from rpy2.robjects.packages import importr
@@ -119,8 +119,6 @@ def plotCoeff(X, y, obj, featureNames, whichReg):
     clf.fit(X,y)
     coeff = clf.coef_
     indices = np.argsort(coeff)[::-1]
-    print indices
-    print featureNames
     featureList = []
     # num_features = len(featureNames)
     print("Feature ranking:")

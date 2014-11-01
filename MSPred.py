@@ -4,7 +4,8 @@ import h5py as hp
 import numpy as np
 import math as M
 from termcolor import colored
-from scipy.interpolate import griddata
+# from scipy.interpolate import griddata
+from helper import griddata
 from sklearn.cross_validation import StratifiedShuffleSplit, ShuffleSplit, StratifiedKFold, KFold
 from sklearn import metrics, preprocessing
 from sklearn.metrics import roc_curve, auc, average_precision_score, precision_recall_curve
@@ -456,7 +457,7 @@ def plotGridPref(gridscore, clfName, obj , n_iter, metric = 'roc_auc'):
                 ynew = np.linspace(max(y), min(y), gridsize)
                 X, Y = np.meshgrid(xnew, ynew)
                 #####Interpolate Z on top of MeshGrids#######
-                Z = griddata(points, score, (X, Y), method = "cubic")
+                Z = griddata(points, score, (X, Y), method = "cubic", tol = 1e-2)
                 z_min = min(score)
                 z_max = max(score)
                 pl.pcolormesh(X,Y,Z, cmap='RdBu', vmin=z_min, vmax=z_max)
@@ -923,7 +924,7 @@ def com_clf_select():
     print("Here are the existing datasets with output saved: \n")
     for obj in objs:
         # Check whether the ouput data for obj has been generated
-        if os.path.exists("./data/"+obj):
+        if os.path.exists(data_path+obj):
         # if os.path.exists(data_path + "/" + obj):
             existobjs.append(obj)
             print(obj)
