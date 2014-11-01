@@ -187,8 +187,8 @@ def save_output(obj, X, y, featureNames, opt = True, n_CV = 10, n_iter = 2, scal
             param_dict = None
         # grids = grid_score_list
         y_pred, y_true, grids_score, imp = testAlgo(clf, X, y, clfName, featureNames, opt, param_dict, times = n_CV, rs=rs, n_iter = n_iter)
-        y_pred = fill_2d(y_pred)
-        y_true = fill_2d(y_true)
+        # y_pred = fill_2d(y_pred)
+        # y_true = fill_2d(y_true)
         res_table = getTable(y_pred, y_true, n_CV, n_folds = 10)
         optString = '_opt' if opt else '_noopt'
         scalingString = '_scaled' if scaling else ''
@@ -243,8 +243,9 @@ def open_output(clfName, obj, opt):
     y_true = map(lambda x: x[~np.isnan(x)], y_true)
     grids_score = f['grids_score'].value
     imp = f['imp'].value
+    table = f['fullPredictionTable'].value
     f.close()
-    return y_pred, y_true, grids_score, imp
+    return y_pred, y_true, grids_score, imp, table
 
 
 def compare_clf(clfs, obj, metric = 'roc_auc', opt = False, n_iter=4, folds=4, times=4):
@@ -253,7 +254,7 @@ def compare_clf(clfs, obj, metric = 'roc_auc', opt = False, n_iter=4, folds=4, t
     mean_everything1 = {}
     for clfName in clfs.keys():
         print clfName
-        y_pred, y_true, grids_score, imp = open_output(clfName, obj, opt)
+        y_pred, y_true, grids_score, imp, _ = open_output(clfName, obj, opt)
         # Need to check imp's shape maybe
         if (len(imp[0])!= 1) & opt & (clfName == "RandomForest"):
             plot_importances(imp,clfName, obj)
@@ -474,12 +475,20 @@ def plotGridPref(gridscore, clfName, obj , metric = 'roc_auc'):
                 save_path = plot_path +obj+'/'+ clfName +'_' +metric+'_'+ i +'_'+ j+'.pdf'
                 fig.savefig(save_path)
 
-def compare_obj_sd(clfName, obj, y_pred, y_true, metric = 'roc_auc',folds = 2, times = 10, opt = True):
+def compare_obj_sd(clfName, obj, table, metric = 'roc_auc', opt = True):
     '''Compare different classifiers on single obj, plot mean and sd, based on times and folds'''
     mean_metric = []
-    for i in range(times):
-        y_true0 = y_true[i*folds: (i+1)*folds]
-        y_pred0 = y_pred[i*folds: (i+1)*folds]
+    y_pred = table[0]
+    print y_pred
+    y_true = table[1]
+    print y_true
+    n_CV = int(max(table[2]))
+    print n_CV
+    n_fold = int(max(table[3]))
+    print n_fold
+    for i in range(n_CV):
+        y_true0 = y_true[i*n_fold: (i+1)*n_fold]
+        y_pred0 = y_pred[i*n_fold: (i+1)*n_fold]
         if metric == 'roc_auc':
             _, _, mean_metric0 = plot_roc(y_pred0, y_true0, clfName, obj, opt, save_sub = False)
         else:
@@ -506,7 +515,7 @@ def compare_obj(datasets = [], models = [], opt = True):
         clf = classifiers1[clfName]
         param_dict = param_dist_dict[clfName]
         for obj in datasets:
-            y_pred, y_true, _, _ = open_output(clfName, obj, opt)
+            y_pred, y_true, _, _, table = open_output(clfName, obj, opt)
             mean_fpr, mean_tpr, mean_auc = plot_roc(y_pred, y_true, clfName, obj, opt, save_sub = False)
             mean_everything[obj] = [mean_fpr, mean_tpr, mean_auc]
 
@@ -515,8 +524,8 @@ def compare_obj(datasets = [], models = [], opt = True):
             mean_everything1[obj] = [mean_rec, mean_prec, mean_auc1]
 
             # sd list
-            roc_list0 = compare_obj_sd(clfName, obj, y_pred, y_true, metric = 'roc_auc', opt= opt)
-            pr_list0 = compare_obj_sd(clfName, obj, y_pred, y_true, metric = 'pr', opt = opt)
+            roc_list0 = compare_obj_sd(clfName, obj, table, metric = 'roc_auc', opt= opt)
+            pr_list0 = compare_obj_sd(clfName, obj, table, metric = 'pr', opt = opt)
             roc_list.append(roc_list0)
             pr_list.append(pr_list0)
 
