@@ -259,7 +259,7 @@ def compare_clf(clfs, obj, metric = 'roc_auc', opt = False, n_iter=4, folds=4, t
             plot_importances(imp,clfName, obj)
         # Because if opt = Flase, grids_score should be []
         if len(grids_score)>0:
-            plotGridPref(grids_score, clfName, obj, n_iter, metric)
+            plotGridPref(grids_score, clfName, obj, metric)
         # output roc results and plot folds
         mean_fpr, mean_tpr, mean_auc = plot_roc(y_pred, y_true, clfName, obj, opt)
         mean_everything[clfName] = [mean_fpr, mean_tpr, mean_auc]
@@ -413,7 +413,7 @@ def plot_unit_prep(y_pred, y_true, metric, plotfold = False):
     mean_area = auc(mean_x,mean_y)
     return mean_x, mean_y, mean_area
 
-def plotGridPref(gridscore, clfName, obj , n_iter, metric = 'roc_auc'):
+def plotGridPref(gridscore, clfName, obj , metric = 'roc_auc'):
     ''' Plot Grid Performance
     '''
     # data_path = data_path+obj+'/'+clfName+'_opt.h5'
