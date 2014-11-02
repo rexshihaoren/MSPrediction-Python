@@ -248,7 +248,7 @@ def open_output(clfName, obj, opt):
     return y_pred, y_true, grids_score, imp, table
 
 
-def compare_clf(clfs, obj, metric = 'roc_auc', opt = False, n_iter=4, folds=4, times=4):
+def compare_clf(clfs, obj, metric = 'roc_auc', opt = False):
     '''Compare classifiers with mean roc_auc'''
     mean_everything= {}
     mean_everything1 = {}
