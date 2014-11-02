@@ -54,7 +54,6 @@ def testAlgo(clf, X, y, clfName, featureNames, opt = False, param_dict = None, o
             i_fold += 1
     # Only rearange format if grids is not []
     grid_score_final = []
-    print grids_score
     if grids_score[0][2] != []:
         fields = grids_score[0][2][0].parameters.keys() + list(['mean_validation_score'])
         fields.append('std')
@@ -120,9 +119,9 @@ def fitAlgo(clf, Xtrain, Ytrain, opt = False, param_dict = None, opt_metric = 'r
         if param_dict != None:
             assert(map(lambda x: not isinstance(param_dict[x], list), param_dict))
             for k in param_dict.keys():
-                print k
-                print opt
-                print param_dict
+                # print k
+                # print opt
+                # print param_dict
                 clf.set_params(k = param_dict[k])
         clf.fit(Xtrain, Ytrain)
         return clf, [], []
@@ -187,13 +186,14 @@ def save_output(obj, X, y, featureNames, opt = True, n_CV = 10, n_iter = 2, scal
             param_dict = None
         # grids = grid_score_list
         y_pred, y_true, grids_score, imp = testAlgo(clf, X, y, clfName, featureNames, opt, param_dict, times = n_CV, rs=rs, n_iter = n_iter)
-        # y_pred = fill_2d(y_pred)
-        # y_true = fill_2d(y_true)
+        y_pred = fill_2d(y_pred)
+        y_true = fill_2d(y_true)
         res_table = getTable(y_pred, y_true, n_CV, n_folds = 10)
         optString = '_opt' if opt else '_noopt'
         scalingString = '_scaled' if scaling else ''
         f = hp.File(data_path + obj + '/' + clfName + optString + scalingString + '.h5', 'w')
         print("Saving output to file for " + clfName)
+        print type(y_true)
         f.create_dataset('y_true', data = y_true)
         f.create_dataset('y_pred', data = y_pred)
         f.create_dataset('grids_score', data = grids_score)
@@ -475,20 +475,15 @@ def plotGridPref(gridscore, clfName, obj , metric = 'roc_auc'):
                 save_path = plot_path +obj+'/'+ clfName +'_' +metric+'_'+ i +'_'+ j+'.pdf'
                 fig.savefig(save_path)
 
-def compare_obj_sd(clfName, obj, table, metric = 'roc_auc', opt = True):
+def compare_obj_sd(clfName, obj, y_pred, y_true, table, metric = 'roc_auc', opt = True):
     '''Compare different classifiers on single obj, plot mean and sd, based on times and folds'''
+    print "Compare_obj_sd for "+ clfName+ " " + obj
     mean_metric = []
-    y_pred = table[0]
-    print y_pred
-    y_true = table[1]
-    print y_true
-    n_CV = int(max(table[2]))
-    print n_CV
-    n_fold = int(max(table[3]))
-    print n_fold
+    n_folds = len(np.unique(table[:, 2]))
+    n_CV = len(np.unique(table[:, 3]))
     for i in range(n_CV):
-        y_true0 = y_true[i*n_fold: (i+1)*n_fold]
-        y_pred0 = y_pred[i*n_fold: (i+1)*n_fold]
+        y_true0 = y_true[i*n_folds: (i+1)*n_folds]
+        y_pred0 = y_pred[i*n_folds: (i+1)*n_folds]
         if metric == 'roc_auc':
             _, _, mean_metric0 = plot_roc(y_pred0, y_true0, clfName, obj, opt, save_sub = False)
         else:
@@ -524,8 +519,8 @@ def compare_obj(datasets = [], models = [], opt = True):
             mean_everything1[obj] = [mean_rec, mean_prec, mean_auc1]
 
             # sd list
-            roc_list0 = compare_obj_sd(clfName, obj, table, metric = 'roc_auc', opt= opt)
-            pr_list0 = compare_obj_sd(clfName, obj, table, metric = 'pr', opt = opt)
+            roc_list0 = compare_obj_sd(clfName, obj, y_pred, y_true, table, metric = 'roc_auc', opt= opt)
+            pr_list0 = compare_obj_sd(clfName, obj, y_pred, y_true, table, metric = 'pr', opt = opt)
             roc_list.append(roc_list0)
             pr_list.append(pr_list0)
 
@@ -621,8 +616,6 @@ def plot_importances(imp, clfName, obj):
     mean_importance = np.mean(imp,axis=0)
     std_importance = np.std(imp,axis=0)
     indices = np.argsort(mean_importance)[::-1]
-    print indices
-    print featureNames
     featureList = []
     num_features = len(featureNames)
     print("Feature ranking:")
@@ -721,10 +714,7 @@ def plotCoeff(X, y, obj, featureNames, whichReg):
         coeff = np.absolute(clf.coef_[0])
     else:
         coeff = np.absolute(clf.coef_)
-    print coeff
     indices = np.argsort(coeff)[::-1]
-    print indices
-    print featureNames
     featureList = []
     num_features = len(featureNames)
     print("Feature ranking:")
@@ -987,10 +977,12 @@ classifiers = {"LogisticRegression": LogisticRegression(),
 #                     "BayesMixed2": MixNB2()
 #                     }
 # Only for local testing at Rex's machine
-classifiers1 = {"LogisticRegression": LogisticRegression(),
-                    "RandomForest": RandomForestClassifier(),
-                    "BayesMixed2": MixNB2()
-                    }
+# classifiers1 = {"LogisticRegression": LogisticRegression(),
+#                 "RandomForest": RandomForestClassifier(),
+#                 "BayesMixed2": MixNB2()
+#                 }
+classifiers1 = {"LogisticRegression": LogisticRegression()
+                }
 # dictionaries of different classifiers, these can be eyeballed from my parameter sweeping curve
 num_features = 6
 random_forest_params = {"n_estimators": [50,100,200,300],
