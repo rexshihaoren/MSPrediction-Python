@@ -4,7 +4,7 @@ import h5py as hp
 import numpy as np
 import math as M
 # from scipy.interpolate import griddata
-from helper import griddata
+from gridhelper import griddata
 from sklearn.cross_validation import StratifiedShuffleSplit, ShuffleSplit, StratifiedKFold, KFold
 from sklearn import metrics, preprocessing
 from sklearn.metrics import roc_curve, auc, average_precision_score, precision_recall_curve
@@ -177,8 +177,8 @@ def save_output(obj, X, y, featureNames, opt = True, n_CV = 10, n_iter = 2, scal
     if scaling:
         X = preprocessing.scale(X)
 
-    for clfName in classifiers1.keys():
-        clf = classifiers1[clfName]
+    for clfName in classifiers.keys():
+        clf = classifiers[clfName]
         if opt:
             param_dict = param_dist_dict[clfName]
             # print param_dict
@@ -238,9 +238,12 @@ def open_output(clfName, obj, opt):
         data_path1 = data_path0 + clfName + '_noopt.h5'
     f = hp.File(data_path1, 'r')
     y_pred = f['y_pred'].value
-    y_pred = map(lambda x: x[~np.isnan(x)], y_pred)
+    y_pred = [x[~np.isnan(x)] for x in y_pred]
+    # y_pred = map(lambda x: x[~np.isnan(x)], y_pred)
     y_true = f['y_true'].value
     y_true = map(lambda x: x[~np.isnan(x)], y_true)
+    y_true = [x[~np.isnan(x)] for x in y_true]
+
     grids_score = f['grids_score'].value
     imp = f['imp'].value
     table = f['fullPredictionTable'].value
@@ -385,12 +388,16 @@ def plot_unit_prep(y_pred, y_true, metric, plotfold = False):
     plotfold - - whether to plot indiviudal fold or not'''
     mean_y= 0.0
     mean_x = np.linspace(0, 1, 1000)
-    if len(y_pred)==1:
+    if len(list(y_pred))==1:
             print("y_pred length 1")
-            folds = zip([y_pred],[y_true])
+            folds = list(zip([y_pred],[y_true]))
     else:
-            folds = zip(y_pred,y_true)
-    for i, (pred,true) in enumerate(folds):
+            print("y_pred length not 1")
+            folds = list(zip(y_pred,y_true))
+    for pred,true in folds:
+        print("iterate through folds")
+        print(pred)
+        print(true)
         # pred & true represent each of the experiment folds
         try:
             if metric == 'roc_auc':
@@ -406,12 +413,17 @@ def plot_unit_prep(y_pred, y_true, metric, plotfold = False):
                 # xp must be increasing, so reverse x array, which means the corresponding y has to reverse order as well.
                 mean_y += np.interp(mean_x, x[::-1], y[::-1])
         except ValueError:
+            print("ValueError")
             print(true)
             print(pred)
             print(metric +" is currently not available")
+        print("mean_y before divide")
+        print(mean_y)
         # mean_y[0] = 0.0
-    mean_y
-    mean_y/= len(folds)
+    # mean_y/= len(folds)
+    # print(len(list(y_true)))
+    ylen = len(list(y_true))
+    mean_y = mean_y /ylen
     mean_area = auc(mean_x,mean_y)
     return mean_x, mean_y, mean_area
 
@@ -508,7 +520,7 @@ def compare_obj(datasets = [], models = [], opt = True):
         mean_everything1 = {}
         roc_list = []
         pr_list = []
-        clf = classifiers1[clfName]
+        clf = classifiers[clfName]
         param_dict = param_dist_dict[clfName]
         for obj in datasets:
             y_pred, y_true, _, _, table = open_output(clfName, obj, opt)
@@ -542,7 +554,7 @@ def compare_obj(datasets = [], models = [], opt = True):
             save_path = plot_path +clfName+'/'+'dataset_comparison_'+ dsls + 'roc_auc' +'_opt.pdf'
         else:
             save_path = plot_path +clfName+'/'+'dataset_comparison_'+ dsls + 'roc_auc' +'_noopt.pdf'
-        fig.savefig(save_path)
+        # fig.savefig(save_path)
 
         # Compare pr score of all clfs
         fig1 = pl.figure(figsize=(8,6),dpi=150)
@@ -561,13 +573,14 @@ def compare_obj(datasets = [], models = [], opt = True):
             save_path = plot_path +clfName+'/'+'dataset_comparison_'+ dsls + 'pr' +'_opt.pdf'
         else:
             save_path = plot_path +clfName+'/'+'dataset_comparison_'+ dsls + 'pr' +'_noopt.pdf'
-        fig1.savefig(save_path)
+        # fig1.savefig(save_path)
         # store sd score of all roc_auc of all clfs
         mean_sd_roc_auc[clfName] = roc_list
         # store sd score of all prs of all clfs
         mean_sd_pr[clfName] = pr_list
-    plot_sd(mean_sd_roc_auc, datasets, 'roc_auc', opt)
-    plot_sd(mean_sd_pr, datasets, 'pr', opt)
+    f, p = plot_sd(mean_sd_roc_auc, datasets, 'roc_auc', opt)
+    return f
+    # plot_sd(mean_sd_pr, datasets, 'pr', opt)
 
 
 def plot_sd(mean_sd, datasets, metric, opt):
@@ -606,7 +619,8 @@ def plot_sd(mean_sd, datasets, metric, opt):
         save_path = plot_path +'dataset_sd_comp_'+ dsls + metric +'_opt.pdf'
     else:
         save_path = plot_path +'dataset_sd_comp_'+ dsls + metric +'_noopt.pdf'
-    fig.savefig(save_path)
+    # fig.savefig(save_path)
+    return fig, save_path
 
 
 ### Functions to analyze different models, plot importances for random forest, coefficients for logistic and linear regressions, and fit pdf plot for Bayes
@@ -795,7 +809,7 @@ def comp_obj_select():
     s= input("Please input in a list format, e.g. [\"Core\", \"Core_Imp\"]")
     datasets = eval(s)
     print("Which following classifiers do you wanna use?")
-    for i in classifiers1.keys():
+    for i in classifiers.keys():
         print(i)
     s = input("Please input in a list format, e.g. [\"RandomForest\", \"LogisticRegression\"]")
     models = eval(s)
@@ -904,7 +918,7 @@ def save_output_single(obj):
     # Single clf analysis for obj
     sin_ana = input("Single clf analysis for "+ obj + " ? (Y\ N)")
     if (sin_ana == 'Y'):
-        clf, clfName = choose_clf(classifiers1)
+        clf, clfName = choose_clf(classifiers)
         param_sweep = input("Parameter Sweeping? (Y/ N) ")
         if param_sweep == "Y" or param_sweep == "y":
             param, param_dist, metric = param_sweep_select(clf)
@@ -933,7 +947,7 @@ def com_clf_select():
     while obj not in existobjs:
         obj = input('Which dataset would you choose from above list?')
     com_clf_opt = input ("With optimization? (Y/N)")
-    compare_clf(classifiers1, obj, metric = 'roc_auc', opt = (com_clf_opt == 'Y'))
+    compare_clf(classifiers, obj, metric = 'roc_auc', opt = (com_clf_opt == 'Y'))
 
 
 def path_finder():
@@ -969,7 +983,7 @@ classifiers = {"LogisticRegression": LogisticRegression(),
                     "BayesMixed2": MixNB2()
                     }
 # Classifiers actually considered
-# classifiers1 = {"LogisticRegression": LogisticRegression(),
+# classifiers = {"LogisticRegression": LogisticRegression(),
 #                     "BayesBernoulli": BernoulliNB(),
 #                     "BayesGaussian": GaussianNB(),
 #                     "BayesGaussian2":GaussianNB2(),
@@ -979,12 +993,12 @@ classifiers = {"LogisticRegression": LogisticRegression(),
 #                     "BayesMixed2": MixNB2()
 #                     }
 # Only for local testing at Rex's machine
-# classifiers1 = {"LogisticRegression": LogisticRegression(),
+# classifiers = {"LogisticRegression": LogisticRegression(),
 #                 "RandomForest": RandomForestClassifier(),
 #                 "BayesMixed2": MixNB2()
 #                 }
-classifiers1 = {"LogisticRegression": LogisticRegression()
-                }
+# classifiers = {"LogisticRegression": LogisticRegression()
+#                 }
 # dictionaries of different classifiers, these can be eyeballed from my parameter sweeping curve
 num_features = 6
 random_forest_params = {"n_estimators": [50,100,200,300],

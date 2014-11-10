@@ -7,7 +7,7 @@ from scipy.spatial import cKDTree
 from scipy.misc import factorial
 from scipy.stats import chisquare, itemfreq
 from scipy.optimize import fmin, fmin_bfgs, fminbound
-import EnjoyLifePred as ELP
+# import EnjoyLifePred as ELP
 from statsmodels.discrete.discrete_model import Poisson as pois
 from naive_bayes import BernoulliNB, GaussianNB, GaussianNB2, MultinomialNB, PoissonNB, MixNB
 import os
@@ -91,27 +91,27 @@ def testargmax():
     return X, negloglikemat, negloglikecolsum, la
 
 
-def testMixNB():
-    import EnjoyLifePred as ELP
-    data_path = '../MSPrediction-R/Data Scripts/data/predData.h5'
-    obj = 'EDSS'
-    target = 'ModEDSS'
-    X, y, featureNames = ELP.pred_prep(data_path, obj, target)
-    from naive_bayes import BernoulliNB, GaussianNB, GaussianNB2, MultinomialNB, PoissonNB, MixNB
-    clf = GaussianNB2()
-    clf.fit(X,y)
-    clf = {}
-    clf0 = GaussianNB()
-    clf1 = GaussianNB2()
-    clf2 = PoissonNB()
-    clf3 = MixNB()
-    clf[0] = clf0
-    clf[1] = clf1
-    clf[2] = clf2
-    clf[3] = clf3
-    for k in clf.keys():
-        clf[k].fit(X,y)
-    return clf
+# def testMixNB():
+#     import EnjoyLifePred as ELP
+#     data_path = '../MSPrediction-R/Data Scripts/data/predData.h5'
+#     obj = 'EDSS'
+#     target = 'ModEDSS'
+#     X, y, featureNames = ELP.pred_prep(data_path, obj, target)
+#     from naive_bayes import BernoulliNB, GaussianNB, GaussianNB2, MultinomialNB, PoissonNB, MixNB
+#     clf = GaussianNB2()
+#     clf.fit(X,y)
+#     clf = {}
+#     clf0 = GaussianNB()
+#     clf1 = GaussianNB2()
+#     clf2 = PoissonNB()
+#     clf3 = MixNB()
+#     clf[0] = clf0
+#     clf[1] = clf1
+#     clf[2] = clf2
+#     clf[3] = clf3
+#     for k in clf.keys():
+#         clf[k].fit(X,y)
+#     return clf
 def plotCoeff(X, y, obj, featureNames, whichReg):
     """ Plot Regression's Coeff
     """

@@ -2,7 +2,7 @@ from tkinter import *
 from tkinter import ttk
 import h5py as hp
 import os
-import ms as MSP
+import ms
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
 
 # def calculate(*args):
@@ -98,6 +98,8 @@ l.grid(column=0, row=4, sticky=(N,W,E,S))
 s.grid(column=1, row=4, sticky=(N,S))
 l['yscrollcommand'] = s.set
 dsvars = []
+plot_path = " "
+
 def getds():
     value = h5name.get()
     global general_path, h5_path, data_path, plot_path
@@ -105,6 +107,8 @@ def getds():
     h5_path = './' + value + '/' + value + '.h5'
     data_path = general_path + 'data/'
     plot_path = general_path + 'plots/'
+    ms.plot_path = plot_path
+    ms.data_path = data_path 
     f = hp.File(h5_path, 'r')
     global objs
     objs = [str(i) for i in f.keys()]
@@ -163,7 +167,7 @@ def getclf():
     print(datasets)
     for ds in datasets:
         for clfname in clfnames:
-            if os.path.exists(data_path + ds +'/' + clfname + '_opt.h5'):
+            if not os.path.exists(data_path + ds +'/' + clfname + '_opt.h5'):
                 print("remove" + clfname)
                 clfnames.remove(clfname)
     print("clfnames: ")
@@ -179,20 +183,27 @@ ttk.Label(mainframe, text = "Classifiers").grid(column= 2, row = 3, sticky=W)
 
 ####### Pic Canvas #########
 
-# pic = Canvas(mainframe, height = 400).grid(column = 0, row = 5, columnspan = 4, rowspan = 4, sticky=(N,W,E,S))
-ttk.Button(mainframe, text = 'ROC', command=plotroc).grid(column= 4, row = 5, sticky=W)
-ttk.Button(mainframe, text = 'PR', command=plotpr).grid(column= 4, row = 6, sticky=W)
-ttk.Button(mainframe, text = 'SD', command=getsd).grid(column= 4, row = 7, sticky=W)
-ttk.Button(mainframe, text = 'Save', command=saveplot).grid(column= 4, row = 8, sticky=W)
-
-################################
-def plotroc():
+def plotsd():
     # ouput figure from MSP
-    # f = ms.
+    global clfs
+    clfs = [clfNames[i] for i in list(l2.curselection())]
+    print("datasets: ")
+    print(datasets)
+    print("clfs: ")
+    print(clfs)
+    f = ms.compare_obj(datasets = datasets, models = clfs)
     a = f.add_subplot(111)
     canvas = FigureCanvasTkAgg(f, master=root)
     canvas.show()
     canvas.get_tk_widget().grid(column = 0, row = 5, columnspan = 4, rowspan = 4, sticky=(N,W,E,S))
+############################
+# pic = Canvas(mainframe, height = 400).grid(column = 0, row = 5, columnspan = 4, rowspan = 4, sticky=(N,W,E,S))
+# ttk.Button(mainframe, text = 'ROC', command=plotroc).grid(column= 4, row = 5, sticky=W)
+# ttk.Button(mainframe, text = 'PR', command=plotpr).grid(column= 4, row = 6, sticky=W)
+ttk.Button(mainframe, text = 'SD', command=plotsd).grid(column= 4, row = 7, sticky=W)
+# ttk.Button(mainframe, text = 'Save', command=saveplot).grid(column= 4, row = 8, sticky=W)
+
+################################
 
 
 
