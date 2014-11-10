@@ -4,7 +4,8 @@ import h5py as hp
 import os
 import ms
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
-
+import pylab as pl
+from tkinter import tix
 # def calculate(*args):
 #     try:
 #         value = float(feet.get())
@@ -19,14 +20,16 @@ clfNames = ["LogisticRegression", "KNN", "BayesBernoulli", "BayesMultinomial", "
 #
 root = Tk()
 root.title("MSPred")
-root.resizable(True, True)
+root.pack_propagate(0)
+root.grid_rowconfigure(0, weight=1)
+root.grid_columnconfigure(0, weight=1)
 # root.attributes('-fullscreen', True)
 
 # mainframe = ttk.Frame(root, padding="3 3 12 12")
 mainframe = ttk.Frame(root)
 mainframe.grid(column=0, row=0, sticky=(N, W, E, S))
-mainframe.columnconfigure(0, weight=1)
-mainframe.rowconfigure(0, weight=1)
+# mainframe.columnconfigure(0, weight=1)
+# mainframe.rowconfigure(0, weight=1)
 # mainframe.pack(expand =1, fill = BOTH, side = TOP)
 
 
@@ -182,7 +185,7 @@ ttk.Label(mainframe, text = "Classifiers").grid(column= 2, row = 3, sticky=W)
 
 
 ####### Pic Canvas #########
-
+f = pl.figure(figsize=(1,1), dpi = 100)
 def plotsd():
     # ouput figure from MSP
     global clfs
@@ -191,11 +194,35 @@ def plotsd():
     print(datasets)
     print("clfs: ")
     print(clfs)
-    f = ms.compare_obj(datasets = datasets, models = clfs)
-    a = f.add_subplot(111)
-    canvas = FigureCanvasTkAgg(f, master=root)
+    global f
+    f0 = ms.compare_obj(datasets = datasets, models = clfs)
+    f = f0
+    # f.set_size_inches([4,4])
+    f.tight_layout()
+    ax = f.add_subplot(111)
+
+    # f = f0.set_inches_size(100, 100)
+    # a = f.add_subplot(111)
+    canvas = FigureCanvasTkAgg(f, master=mainframe)
+    # canvas.resize(100,100)
     canvas.show()
     canvas.get_tk_widget().grid(column = 0, row = 5, columnspan = 4, rowspan = 4, sticky=(N,W,E,S))
+    canvas._tkcanvas.pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
+    # canvas.get_tk_widget().pack(side=LEFT, fill=BOTH, expand=1)
+    # toolbar = NavigationToolbar2TkAgg( canvas, mainframe )
+    # toolbar.update()
+    # canvas._tkcanvas.pack(side=LEFT, fill=BOTH, expand=1)
+    # def on_key_event(event):
+    #     print('you pressed %s'%event.key)
+    #     key_press_handler(event, canvas, toolbar)
+    # canvas.mpl_connect('key_press_event', on_key_event)
+    # def _quit():
+    #     root.quit()     # stops mainloop
+    #     root.destroy()  # this is necessary on Windows to prevent
+    #                     # Fatal Python Error: PyEval_RestoreThread: NULL tstate
+
+    # button = ttk.Button(master= mainframe, text='Quit', command=_quit)
+    # button.pack(side=BOTTOM)
 ############################
 # pic = Canvas(mainframe, height = 400).grid(column = 0, row = 5, columnspan = 4, rowspan = 4, sticky=(N,W,E,S))
 # ttk.Button(mainframe, text = 'ROC', command=plotroc).grid(column= 4, row = 5, sticky=W)

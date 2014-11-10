@@ -1,4 +1,4 @@
-def compare_wrappers(datasets = [], clfNames = [], opt = True):
+def compare_wrappers(datasets = [], clfNames = [], opt = True, tp = 'roc_auc'):
     ''' A function that takes a list of datasets and clfNames, so that it compare the model performance (roc_auc, pr, or sd)
 
     	TODO: 
@@ -38,9 +38,10 @@ def compare_wrappers(datasets = [], clfNames = [], opt = True):
         	comb = i+'_'+j
         	combls += comb
             y_pred, y_true, _, _, table = open_output(clfName, obj, opt)
+
+            # out roc results and plot folds
             mean_fpr, mean_tpr, mean_auc = plot_roc(y_pred, y_true, clfName, obj, opt, save_sub = False)
             mean_everything[comb] = [mean_fpr, mean_tpr, mean_auc]
-
             # out pr results and plot folds
             mean_rec, mean_prec, mean_auc1 = plot_pr(y_pred, y_true, clfName, obj, opt, save_sub = False)
             mean_everything1[comb] = [mean_rec, mean_prec, mean_auc1]
@@ -55,32 +56,30 @@ def compare_wrappers(datasets = [], clfNames = [], opt = True):
         # store sd score of all prs of all clfs
         mean_sd_pr[clfName] = pr_list
 
+    # initialize fig and save_path
+    fig = pl.figure(figsize=(4,4),dpi=100)
+    save_path = ''
     if tp == 'sd':
-	    plot_sd(mean_sd_roc_auc, datasets, 'roc_auc', opt)
-	    plot_sd(mean_sd_pr, datasets, 'pr', opt)
+	    fig, save_path = plot_sd(mean_sd_roc_auc, datasets, 'roc_auc', opt)
 	elif tp == 'roc_auc':
-
         # Compare mean roc score of all datasets with clf
-        fig = pl.figure(figsize=(8,6),dpi=150)
         for comb in  combls:
             [mean_fpr, mean_tpr, mean_auc] = mean_everything[comb]
             pl.plot(mean_fpr, mean_tpr, lw=3, label = comb + ' (area = %0.2f)' %mean_auc)
         pl.plot([0, 1], [0, 1], 'k--')
         pl.xlim([0.0, 1.0])
         pl.ylim([0.0, 1.0])
-        pl.xlabel('False Positive Rate',fontsize=30)
-        pl.ylabel('True Positive Rate',fontsize=30)
-        pl.title('Receiver Operating Characteristic',fontsize=25)
-        pl.legend(loc='lower right')
+        pl.xlabel('False Positive Rate',fontsize=10)
+        pl.ylabel('True Positive Rate',fontsize=10)
+        pl.title('Receiver Operating Characteristic',fontsize=10)
+        pl.legend(loc='lower right', prop = {'size':7.5})
         pl.tight_layout()
         if opt:
             save_path = plot_path +clfName+'/'+'dataset_comparison_'+ combls + 'roc_auc' +'_opt.pdf'
         else:
             save_path = plot_path +clfName+'/'+'dataset_comparison_'+ combls + 'roc_auc' +'_noopt.pdf'
-        fig.savefig(save_path)
     elif tp == 'pr':
         # Compare pr score of all clfs
-        fig1 = pl.figure(figsize=(8,6),dpi=150)
         for comb in  combls:
             [mean_rec, mean_prec, mean_auc1] = mean_everything1[comb]
             pl.plot(mean_rec, mean_prec, lw=3, label = comb + ' (area = %0.2f)' %mean_auc1)
@@ -96,7 +95,8 @@ def compare_wrappers(datasets = [], clfNames = [], opt = True):
             save_path = plot_path +clfName+'/'+'dataset_comparison_'+ combls + 'pr' +'_opt.pdf'
         else:
             save_path = plot_path +clfName+'/'+'dataset_comparison_'+ combls + 'pr' +'_noopt.pdf'
-        fig1.savefig(save_path)
+
     else:
-    	print "NO SUCH PLOTING OPTION "+ tp
+    	print("NO SUCH PLOTING OPTION: "+ tp)
+    return fig, save_path
         
