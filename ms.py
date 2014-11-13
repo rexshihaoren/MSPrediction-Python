@@ -657,7 +657,7 @@ def compare_obj(datasets = [], models = [], opt = True):
             save_path = plot_path +clfName+'/'+'dataset_comparison_'+ dsls + 'roc_auc' +'_opt.pdf'
         else:
             save_path = plot_path +clfName+'/'+'dataset_comparison_'+ dsls + 'roc_auc' +'_noopt.pdf'
-        # fig.savefig(save_path)
+        fig.savefig(save_path)
 
         # Compare pr score of all clfs
         fig1 = pl.figure(figsize=(8,6),dpi=150)
@@ -676,7 +676,7 @@ def compare_obj(datasets = [], models = [], opt = True):
             save_path = plot_path +clfName+'/'+'dataset_comparison_'+ dsls + 'pr' +'_opt.pdf'
         else:
             save_path = plot_path +clfName+'/'+'dataset_comparison_'+ dsls + 'pr' +'_noopt.pdf'
-        # fig1.savefig(save_path)
+        fig1.savefig(save_path)
         # store sd score of all roc_auc of all clfs
         mean_sd_roc_auc[clfName] = roc_list
         # store sd score of all prs of all clfs
