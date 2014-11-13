@@ -6,82 +6,63 @@ import ms
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolbar2TkAgg
 import pylab as pl
 from tkinter import tix
-# def calculate(*args):
-#     try:
-#         value = float(feet.get())
-#         meters.set((0.3048 * value * 10000.0 + 0.5)/10000.0)
-#     except ValueError:
-#         pass
+class AutoScrollbar(Scrollbar):
+    # a scrollbar that hides itself if it's not needed.  only
+    # works if you use the grid geometry manager.
+    def set(self, lo, hi):
+        if float(lo) <= 0.0 and float(hi) >= 1.0:
+            # grid_remove is currently missing from Tkinter!
+            self.tk.call("grid", "remove", self)
+        else:
+            self.grid()
+        Scrollbar.set(self, lo, hi)
+    def pack(self, **kw):
+        raise TclError("cannot use pack with this widget")
+    def place(self, **kw):
+        raise TclError("cannot use place with this widget")
+
+
+root = Tk()
+root.title("MSPred")
+root.geometry("1000x1000")
+vscrollbar = AutoScrollbar(root)
+vscrollbar.grid(row=0, column=1, sticky=N+S)
+hscrollbar = AutoScrollbar(root, orient=HORIZONTAL)
+hscrollbar.grid(row=1, column=0, sticky=E+W)
+
+canvas = Canvas(root, scrollregion=(0, 0, 1000, 1000),
+                yscrollcommand=vscrollbar.set,
+                xscrollcommand=hscrollbar.set)
+canvas.grid(row=0, column=0, sticky=N+S+E+W)
+
+vscrollbar.config(command=canvas.yview)
+hscrollbar.config(command=canvas.xview)
+
+# make the canvas expandable
+root.grid_rowconfigure(0, weight=1)
+root.grid_columnconfigure(0, weight=1)
+
+#
+# create canvas contents
+
+frame = Frame(canvas)
+frame.rowconfigure(1, weight=1)
+frame.columnconfigure(1, weight=1)
+
+
+
+########## MY OWN #####################
+
+
+
+
+
 
 ##### All the Classifiers #####
 clfNames = ["LogisticRegression", "KNN", "BayesBernoulli", "BayesMultinomial", "BayesGaussian", "BayesGaussian2", "BayesPoisson", "SVM", "RandomForest", "LinearRegression", "BayesMixed", "BayesMixed2"]
 
-##### Chooose H5 File #######
-#
-root = Tk()
-root.title("MSPred")
-root.pack_propagate(0)
-root.grid_rowconfigure(0, weight=1)
-root.grid_columnconfigure(0, weight=1)
-# root.attributes('-fullscreen', True)
 
-# mainframe = ttk.Frame(root, padding="3 3 12 12")
-mainframe = ttk.Frame(root)
-mainframe.grid(column=0, row=0, sticky=(N, W, E, S))
-# mainframe.columnconfigure(0, weight=1)
-# mainframe.rowconfigure(0, weight=1)
-# mainframe.pack(expand =1, fill = BOTH, side = TOP)
-
-
-# mainframe = ttk.Frame(root, padding="3 3 12 12", width=300,height=300).grid(column=0, row=0, sticky=(N, W, E, S))
-# mainframe.columnconfigure(0, weight=1)
-# mainframe.rowconfigure(0, weight=1)
-
-
-####### Add Scroll Bar ######
-#
-#
-# h = ttk.Scrollbar(root, orient=HORIZONTAL)
-# v = ttk.Scrollbar(root, orient=VERTICAL)
-# canvas = Canvas(root, scrollregion=(0, 0, 1000, 1000))
-# # h['command'] = canvas.xview
-# # v['command'] = canvas.yview
-# canvas['yscrollcommand'] = v.set
-# canvas['xscrollcommand'] = h.set
-
-# ttk.Sizegrip(root).grid(column=10, row=10, sticky=(S,E))
-
-# canvas.grid(column=0, row=0, sticky=(N,W,E,S))
-# h.grid(column=10, row=1, sticky=(W,E))
-# v.grid(column=1, row=10, sticky=(N,S))
-#
-#
-# canvas = Canvas(root,width=1000,height=1000,scrollregion=(0,0,1000,1000))
-# hbar=Scrollbar(root,orient=HORIZONTAL)
-# hbar.pack(side=BOTTOM,fill=X)
-# hbar.config(command=canvas.xview)
-# vbar=ttk.Scrollbar(root,orient=VERTICAL)
-# vbar.pack(side=RIGHT,fill=Y)
-# vbar.config(command=canvas.yview)
-# canvas.config(width=1000,height=1000)
-# canvas.config(xscrollcommand=hbar.set, yscrollcommand=vbar.set)
-# canvas.pack(side=LEFT,expand=True,fill=BOTH)
-# 
-# 
-# 
-# scrollbar = ttk.Scrollbar(mainframe)
-# scrollbar.pack(side=RIGHT, fill=Y)
-
-# listbox = Listbox(mainframe, yscrollcommand=scrollbar.set)
-# for i in range(1000):
-#     listbox.insert(END, str(i))
-# listbox.pack(side=LEFT, fill=BOTH)
-
-# scrollbar.config(command=listbox.yview)
-
-###################
-
-ttk.Label(mainframe, text = 'h5 file').grid(column=0, row=0, sticky=(W, E))
+ttk.Label(frame, text = 'h5 file').grid(column=0, row=0, sticky=(W, E))
 
 h5names =  [("predData", 0), ("predData_Impr0-4",2)]
 
@@ -89,14 +70,14 @@ h5name = StringVar()
 h5name.set("predData") # initialize
 
 for text, col in h5names:
-    b = Radiobutton(mainframe, text= text,
+    b = Radiobutton(frame, text= text,
                     variable= h5name, value=text).grid(column = col, row = 1,sticky=W)
     # b.pack(anchor=W)
 objs = []
 datasets = []
 ##### Given h5name, get datasets #####
-l = Listbox(mainframe, selectmode='multiple', width = 25, height=5, exportselection = False)
-s = ttk.Scrollbar(mainframe, orient=VERTICAL, command=l.yview)
+l = Listbox(frame, selectmode='multiple', width = 25, height=5, exportselection = False)
+s = ttk.Scrollbar(frame, orient=VERTICAL, command=l.yview)
 l.grid(column=0, row=4, sticky=(N,W,E,S))
 s.grid(column=1, row=4, sticky=(N,S))
 l['yscrollcommand'] = s.set
@@ -118,46 +99,21 @@ def getds():
     f.close()
     for i in objs:
        l.insert(END, i)
-    # for obj in objs:
-    #     var = IntVar()
-    #     chk = ttk.List(canvas, text=obj, variable=var).grid(column = 0, sticky = W)
-    #     dsvars.append(var)
 
 
-ttk.Button(mainframe, text="get datasets", command=getds).grid(column=0, row=2, sticky=W)
-# h5_path = './' + h5name + '/' + h5name + '.h5'
-# # print(h5_path)
-# f = hp.File(h5_path, 'r')
-# global objs
-# objs = [str(i) for i in f.keys()]
-# f.close()
+ttk.Button(frame, text="get datasets", command=getds).grid(column=0, row=2, sticky=W)
 
-
-# def path_finder(*args):
-#     value = h5name.get()
-#     h5names =  ["predData", "predData_Impr0-4"]
-#     while value not in h5names:
-#         h5name = raw_input("Which h5 file? do you want to use (predData or predData_Impr0-4)")
-#     global general_path, h5_path, data_path, plot_path
-#     general_path = './' + h5name + '/'
-#     h5_path = './' + h5name + '/' + h5name + '.h5'
-#     data_path = general_path + 'data/'
-#     plot_path = general_path + 'plots/'
-#     f = hp.File(h5_path, 'r')
-#     global objs
-#     objs = [str(i) for i in f.keys()]
-#     f.close()
 
 ###### Display Datasets ######
 #
-ttk.Label(mainframe, text = 'Datasets').grid(column=0, row=3, sticky=W)
+ttk.Label(frame, text = 'Datasets').grid(column=0, row=3, sticky=W)
 
 
 ##### Display classifiers #####
 clfs = []
 
-l2 = Listbox(mainframe, selectmode='multiple', width = 25, height=5, exportselection = False)
-s2 = ttk.Scrollbar(mainframe, orient=VERTICAL, command=l2.yview)
+l2 = Listbox(frame, selectmode='multiple', width = 25, height=5, exportselection = False)
+s2 = ttk.Scrollbar(frame, orient=VERTICAL, command=l2.yview)
 l2.grid(column=2, row=4, sticky=(N,W,E,S))
 s2.grid(column=3, row=4, sticky=(N,S))
 l2['yscrollcommand'] = s2.set
@@ -179,62 +135,79 @@ def getclf():
        l2.insert(END, i)
 
 
-ttk.Button(mainframe, text = 'Get Classifiers', command=getclf).grid(column= 2, row = 2, sticky=W)
-ttk.Label(mainframe, text = "Classifiers").grid(column= 2, row = 3, sticky=W)
-
+ttk.Button(frame, text = 'Get Classifiers', command=getclf).grid(column= 2, row = 2, sticky=W)
+ttk.Label(frame, text = "Classifiers").grid(column= 2, row = 3, sticky=W)
 
 
 ####### Pic Canvas #########
-f = pl.figure(figsize=(1,1), dpi = 100)
-def plotsd():
-    # ouput figure from MSP
+f = pl.figure(figsize=(4,4),dpi=100)
+pic = FigureCanvasTkAgg(f, master=frame)
+pic.show()
+pic.get_tk_widget().grid(column = 0, row = 5, columnspan = 4, rowspan = 4, sticky=(N,W,E,S))
+### Save Path #####
+p = " "
+def plotopt(tp):
+    # ouput figure from ms
     global clfs
     clfs = [clfNames[i] for i in list(l2.curselection())]
     print("datasets: ")
     print(datasets)
     print("clfs: ")
     print(clfs)
-    global f
-    f0 = ms.compare_obj(datasets = datasets, models = clfs)
-    f = f0
-    # f.set_size_inches([4,4])
-    f.tight_layout()
-    ax = f.add_subplot(111)
+    global f, p
+    f= ms.compare_wrappers(datasets = datasets, models = clfs, opt = True, tp = tp)
+    p = plot_path + tp
+    for i in datasets:
+        p = p + '_' + i
+    for j in clfs:
+        p = p + '_' + j
+    p = p + '.pdf'
+    global pic
+    pic = FigureCanvasTkAgg(f, master=frame)
+    pic.show()
+    pic.get_tk_widget().grid(column = 0, row = 5, columnspan = 4, rowspan = 4, sticky=(N,W,E,S))
+    # canvas._tkcanvas.pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
 
-    # f = f0.set_inches_size(100, 100)
-    # a = f.add_subplot(111)
-    canvas = FigureCanvasTkAgg(f, master=mainframe)
-    # canvas.resize(100,100)
-    canvas.show()
-    canvas.get_tk_widget().grid(column = 0, row = 5, columnspan = 4, rowspan = 4, sticky=(N,W,E,S))
-    canvas._tkcanvas.pack(side=Tk.TOP, fill=Tk.BOTH, expand=1)
-    # canvas.get_tk_widget().pack(side=LEFT, fill=BOTH, expand=1)
-    # toolbar = NavigationToolbar2TkAgg( canvas, mainframe )
-    # toolbar.update()
-    # canvas._tkcanvas.pack(side=LEFT, fill=BOTH, expand=1)
-    # def on_key_event(event):
-    #     print('you pressed %s'%event.key)
-    #     key_press_handler(event, canvas, toolbar)
-    # canvas.mpl_connect('key_press_event', on_key_event)
-    # def _quit():
-    #     root.quit()     # stops mainloop
-    #     root.destroy()  # this is necessary on Windows to prevent
-    #                     # Fatal Python Error: PyEval_RestoreThread: NULL tstate
 
-    # button = ttk.Button(master= mainframe, text='Quit', command=_quit)
-    # button.pack(side=BOTTOM)
+def saveplot():
+    f.savefig(p)
+
 ############################
-# pic = Canvas(mainframe, height = 400).grid(column = 0, row = 5, columnspan = 4, rowspan = 4, sticky=(N,W,E,S))
-# ttk.Button(mainframe, text = 'ROC', command=plotroc).grid(column= 4, row = 5, sticky=W)
-# ttk.Button(mainframe, text = 'PR', command=plotpr).grid(column= 4, row = 6, sticky=W)
-ttk.Button(mainframe, text = 'SD', command=plotsd).grid(column= 4, row = 7, sticky=W)
-# ttk.Button(mainframe, text = 'Save', command=saveplot).grid(column= 4, row = 8, sticky=W)
+# pic = Canvas(frame, height = 400).grid(column = 0, row = 5, columnspan = 4, rowspan = 4, sticky=(N,W,E,S))
+ttk.Button(frame, text = 'ROC', command=lambda: plotopt('roc_auc')).grid(column= 4, row = 5, sticky=W)
+ttk.Button(frame, text = 'PR', command=lambda:plotopt('pr')).grid(column= 4, row = 6, sticky=W)
+ttk.Button(frame, text = 'SD', command=lambda:plotopt('sd')).grid(column= 4, row = 7, sticky=W)
+ttk.Button(frame, text = 'Save', command=saveplot).grid(column= 4, row = 8, sticky=W)
 
 ################################
 
+def reset():
+    l.delete(0,END)
+    l2.delete(0,END)
+    f = pl.figure(figsize=(4,4),dpi=100)
+    pic = FigureCanvasTkAgg(f, master=frame)
+    pic.show()
+    pic.get_tk_widget().grid(column = 0, row = 5, columnspan = 4, rowspan = 4, sticky=(N,W,E,S))
 
+ttk.Button(frame, text = 'Reset', command=reset).grid(column= 2, row = 0, sticky=W)
 
 ############ padding between widgets #######
-for child in mainframe.winfo_children(): child.grid_configure(padx=5, pady=5)
+for child in frame.winfo_children(): child.grid_configure(padx=5, pady=5)
+
+
+
+
+
+#############################################
+
+
+
+
+
+canvas.create_window(0, 0, anchor=NW, window=frame)
+
+frame.update_idletasks()
+
+canvas.config(scrollregion=canvas.bbox("all"))
 
 root.mainloop()
