@@ -164,7 +164,7 @@ def fill_2d(X, fill = np.nan):
     return np.array(newX)
 
 
-def save_output(obj, X, y, featureNames, opt = True, n_CV = 10, n_iter = 2, scaling = False):
+def save_output(obj, X, y, featureNames, opt = True, n_CV = 10, n_iter = 2):
     '''Save Output (y_pred, y_true, grids_score, and imp) for this dataframe
     Keyword arguments:
     obj - - dataframe name
@@ -174,10 +174,12 @@ def save_output(obj, X, y, featureNames, opt = True, n_CV = 10, n_iter = 2, scal
     '''
     rs = [np.random.randint(1,1000) for i in range(n_CV)]
 
-    if scaling:
-        X = preprocessing.scale(X)
+    # if scaling:
+    #     X = preprocessing.scale(X)
 
     for clfName in list(classifiers.keys()):
+        if (clfName == 'SVM'):
+            X = preprocessing.scale(X)
         clf = classifiers[clfName]
         if opt:
             param_dict = param_dist_dict[clfName]
@@ -190,8 +192,9 @@ def save_output(obj, X, y, featureNames, opt = True, n_CV = 10, n_iter = 2, scal
         y_true = fill_2d(y_true)
         res_table = getTable(y_pred, y_true, n_CV, n_folds = 10)
         optString = '_opt' if opt else '_noopt'
-        scalingString = '_scaled' if scaling else ''
-        f = hp.File(data_path + obj + '/' + clfName + optString + scalingString + '.h5', 'w')
+        # scalingString = '_scaled' if scaling else ''
+        # f = hp.File(data_path + obj + '/' + clfName + optString + scalingString + '.h5', 'w')
+        f = hp.File(data_path + obj + '/' + clfName + optString + '.h5', 'w')
         print(("Saving output to file for " + clfName))
         print((type(y_true)))
         f.create_dataset('y_true', data = y_true)
@@ -955,7 +958,7 @@ def save_output_select():
         n_CV = 10 if n_CV == "" else int(n_CV)
         n_iter = input("How many iterations should be done to optimize parameters? (return for default = 5) \n -->")
         n_iter = 5 if n_iter == "" else int(n_iter)
-        b_scaling = input("Do you want to scale the imput data? (return or 'Y' for Yes) \n -->") in ["", "Yes", "Y"]
+        # b_scaling = input("Do you want to scale the imput data? (return or 'Y' for Yes) \n -->") in ["", "Yes", "Y"]
         # if opt: #Not really relevant since the n_iter is now precomputed.
         #     n_iter = input("How many iteration should be done when optimizing the algorithms? (return for default = 5) \n -->")
         #     n_iter = 5 if n_iter == "" else int(n_iter)
@@ -972,7 +975,7 @@ def save_output_select():
                 X = X.reshape(X.shape[0], 1)
                 num_features = 1
             random_forest_params["max_features"] = list(range(2, num_features + 1))
-            save_output(obj, X, y, featureNames, opt = opt, n_CV=n_CV, scaling = b_scaling, n_iter=n_iter)
+            save_output(obj, X, y, featureNames, opt = opt, n_CV=n_CV, n_iter=n_iter)
 
 def save_output_single(obj):
     print(("Saving output for " + obj))
