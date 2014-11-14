@@ -1102,8 +1102,10 @@ classifiers = {"LogisticRegression": LogisticRegression(),
 #                 "RandomForest": RandomForestClassifier(),
 #                 "BayesMixed2": MixNB2()
 #                 }
-# classifiers = {"LogisticRegression": LogisticRegression()
-#                 }
+classifiers1 = {"LogisticRegression": LogisticRegression(),
+                "RandomForest": RandomForestClassifier()
+                }
+classifiers = classifiers1
 # dictionaries of different classifiers, these can be eyeballed from my parameter sweeping curve
 num_features = 6
 random_forest_params = {"n_estimators": [50,100,200,300],
