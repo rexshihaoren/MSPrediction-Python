@@ -32,9 +32,9 @@ def testAlgo(clf, X, y, clfName, featureNames, opt = False, param_dict = None, o
     y_pred = []
     grids_score = []
     imp = []
-    rs = [np.random.randint(1,1000) for i in xrange(times)] if rs == 0 else rs
+    rs = [np.random.randint(1,1000) for i in range(times)] if rs == 0 else rs
     for i_CV in range(0, times):
-        print("\n###### \CV of testAlgo number " + str(i_CV+1) + " for " + clfName+ "\n###")
+        print(("\n###### \CV of testAlgo number " + str(i_CV+1) + " for " + clfName+ "\n###"))
         cv = StratifiedKFold(y, n_folds = folds, shuffle = True, random_state = rs[i_CV])
         i_fold = 0
         for train_index, test_index in cv:
@@ -54,13 +54,13 @@ def testAlgo(clf, X, y, clfName, featureNames, opt = False, param_dict = None, o
     # Only rearange format if grids is not []
     grid_score_final = []
     if grids_score[0][2] != []:
-        fields = grids_score[0][2][0].parameters.keys() + list(['mean_validation_score'])
+        fields = list(grids_score[0][2][0].parameters.keys()) + list(['mean_validation_score'])
         fields.append('std')
         l_i = len(grids_score[0][2])
         for grids_score_i in grids_score:
             i_CV = grids_score_i[0]
             i_fold = grids_score_i[1]
-            grids2_i = map(lambda x: tuple([i_CV, i_fold] + x.parameters.values()+[x.mean_validation_score,x.cv_validation_scores.std()]),grids_score_i[2])
+            grids2_i = [tuple([i_CV, i_fold] + list(x.parameters.values())+[x.mean_validation_score,x.cv_validation_scores.std()]) for x in grids_score_i[2]]
             datatype = [((['i_CV', 'i_fold'] + fields)[i], np.result_type(grids2_i[0][i]) if not isinstance(grids2_i[0][i], str) else '|S14') for i in range(0, len(fields)+2)]
             grid_score_final_i = np.array(grids2_i, dtype = datatype)
             grid_score_final.append(grid_score_final_i)
@@ -85,12 +85,12 @@ def fitAlgo(clf, Xtrain, Ytrain, opt = False, param_dict = None, opt_metric = 'r
     '''
 
     if opt & (param_dict != None):
-        assert(map(lambda x: isinstance(param_dict[x],list), param_dict))
-        prod_feature_05 =np.prod([math.pow(len(v),0.5) for x, v in param_dict.iteritems()])
-        prod_feature =np.prod([len(v) for x, v in param_dict.iteritems()])
+        assert([isinstance(param_dict[x],list) for x in param_dict])
+        prod_feature_05 =np.prod([math.pow(len(v),0.5) for x, v in param_dict.items()])
+        prod_feature =np.prod([len(v) for x, v in param_dict.items()])
         N_iter = int(np.ceil(prod_feature_05* n_iter / 5 * 1.5))
         N_iter = N_iter if N_iter < prod_feature else prod_feature
-        print("Using N_iter = " + str(N_iter))
+        print(("Using N_iter = " + str(N_iter)))
         if n_iter != 0:
             rs = gd.RandomizedSearchCV(estimator = clf, n_iter = N_iter,
                                     param_distributions = param_dict,
@@ -103,7 +103,7 @@ def fitAlgo(clf, Xtrain, Ytrain, opt = False, param_dict = None, opt_metric = 'r
                                     scoring = opt_metric,
                                     refit = True,
                                     n_jobs=-1, cv = n_optFolds, verbose = 1)
-        print("Simulation with num_features=", num_features)
+        print(("Simulation with num_features=", num_features))
         print("max_features=")
         print(param_dict)
         rs.fit(Xtrain, Ytrain)
@@ -117,8 +117,8 @@ def fitAlgo(clf, Xtrain, Ytrain, opt = False, param_dict = None, opt_metric = 'r
         return rs.best_estimator_, rs.grid_scores_, imp
     else:
         if param_dict != None:
-            assert(map(lambda x: not isinstance(param_dict[x], list), param_dict))
-            for k in param_dict.keys():
+            assert([not isinstance(param_dict[x], list) for x in param_dict])
+            for k in list(param_dict.keys()):
                 # print k
                 # print opt
                 # print param_dict
@@ -146,7 +146,7 @@ def pred_prep(h5_path, obj, target):
     f.close()
     # Convert Everything to float for easier calculation
     dataset = dataset.astype([(k,float) for k in dataset.dtype.names])
-    featureNames = dataset.dtype.fields.keys()
+    featureNames = list(dataset.dtype.fields.keys())
     featureNames.remove(target)
     y = dataset[target]
     newdataset = dataset[featureNames]
@@ -172,12 +172,12 @@ def save_output(obj, X, y, featureNames, opt = True, n_CV = 10, n_iter = 2, scal
     y - - training target array
     opt - - whether to use parameter optimization, default is True
     '''
-    rs = [np.random.randint(1,1000) for i in xrange(n_CV)]
+    rs = [np.random.randint(1,1000) for i in range(n_CV)]
 
     if scaling:
         X = preprocessing.scale(X)
 
-    for clfName in classifiers.keys():
+    for clfName in list(classifiers.keys()):
         clf = classifiers[clfName]
         if opt:
             param_dict = param_dist_dict[clfName]
@@ -192,8 +192,8 @@ def save_output(obj, X, y, featureNames, opt = True, n_CV = 10, n_iter = 2, scal
         optString = '_opt' if opt else '_noopt'
         scalingString = '_scaled' if scaling else ''
         f = hp.File(data_path + obj + '/' + clfName + optString + scalingString + '.h5', 'w')
-        print("Saving output to file for " + clfName)
-        print(type(y_true))
+        print(("Saving output to file for " + clfName))
+        print((type(y_true)))
         f.create_dataset('y_true', data = y_true)
         f.create_dataset('y_pred', data = y_pred)
         f.create_dataset('grids_score', data = grids_score)
@@ -231,7 +231,7 @@ def open_output(clfName, obj, opt):
         imp
     '''
     data_path0 = data_path +obj + '/'
-    print("Open output for " + clfName)
+    print(("Open output for " + clfName))
     if opt:
         data_path1 = data_path0 + clfName + '_opt.h5'
     else:
@@ -241,7 +241,7 @@ def open_output(clfName, obj, opt):
     y_pred = [x[~np.isnan(x)] for x in y_pred]
     # y_pred = map(lambda x: x[~np.isnan(x)], y_pred)
     y_true = f['y_true'].value
-    y_true = map(lambda x: x[~np.isnan(x)], y_true)
+    y_true = [x[~np.isnan(x)] for x in y_true]
     y_true = [x[~np.isnan(x)] for x in y_true]
 
     grids_score = f['grids_score'].value
@@ -255,7 +255,7 @@ def compare_clf(clfs, obj, metric = 'roc_auc', opt = False):
     '''Compare classifiers with mean roc_auc'''
     mean_everything= {}
     mean_everything1 = {}
-    for clfName in clfs.keys():
+    for clfName in list(clfs.keys()):
         print(clfName)
         y_pred, y_true, grids_score, imp, _ = open_output(clfName, obj, opt)
         # Need to check imp's shape maybe
@@ -337,7 +337,7 @@ def plot_roc(y_pred, y_true, clfName, obj, opt, save_sub = True):
     mean_fpr, mean_tpr, mean_auc = plot_unit_prep(y_pred, y_true, 'roc_auc', plotfold = True)
     mean_tpr[-1] = 1.0
     pl.plot([0, 1], [0, 1], '--', color=(0.7, 0.7, 0.7),lw=3,label='Random')
-    print("ROC AUC: %0.2f" % mean_auc)
+    print(("ROC AUC: %0.2f" % mean_auc))
     print(clfName)
     pl.plot(mean_fpr, mean_tpr, 'k--',
                              label='Mean ROC (area = %0.2f)' % mean_auc, lw=2)
@@ -361,7 +361,7 @@ def plot_pr(y_pred, y_true,clfName, obj, opt, save_sub = True):
     '''Plot the Precision-Recall Curve'''
     fig = pl.figure(figsize=(8,6),dpi=150)
     mean_rec, mean_prec, mean_auc = plot_unit_prep(y_pred, y_true, 'pr')
-    print("Precision Recall AUC: %0.2f" % mean_auc)
+    print(("Precision Recall AUC: %0.2f" % mean_auc))
     pl.clf()
     pl.plot(mean_rec, mean_prec, label='Precision-Recall curve')
     pl.xlabel('Recall')
@@ -416,7 +416,7 @@ def plot_unit_prep(y_pred, y_true, metric, plotfold = False):
             print("ValueError")
             print(true)
             print(pred)
-            print(metric +" is currently not available")
+            print((metric +" is currently not available"))
         print("mean_y before divide")
         print(mean_y)
         # mean_y[0] = 0.0
@@ -437,7 +437,7 @@ def plotGridPref(gridscore, clfName, obj , metric = 'roc_auc'):
     CV = np.unique(gridscore["i_CV"])
     folds = np.unique(gridscore["i_fold"])
     numblocks = len(CV) * len(folds)
-    paramNames = gridscore.dtype.fields.keys()
+    paramNames = list(gridscore.dtype.fields.keys())
     paramNames.remove("mean_validation_score")
     paramNames.remove("std")
     paramNames.remove("i_CV")
@@ -462,7 +462,7 @@ def plotGridPref(gridscore, clfName, obj , metric = 'roc_auc'):
             y = newgridscore[j]
             compound = [x,y]
             # Only plot heat map if dtype of all elements of x, y are int or float
-            if [True]* len(compound)== map(lambda t: np.issubdtype(t.dtype,  np.float) or np.issubdtype(t.dtype, np.int), compound):
+            if [True]* len(compound)== [np.issubdtype(t.dtype,  np.float) or np.issubdtype(t.dtype, np.int) for t in compound]:
                 gridsize = 50
                 fig = pl.figure()
                 points = np.vstack([x,y]).T
@@ -490,7 +490,7 @@ def plotGridPref(gridscore, clfName, obj , metric = 'roc_auc'):
 
 def compare_obj_sd(clfName, obj, y_pred, y_true, table, metric = 'roc_auc', opt = True):
     '''Compare different classifiers on single obj, plot mean and sd, based on times and folds'''
-    print("Compare_obj_sd for "+ clfName+ " " + obj)
+    print(("Compare_obj_sd for "+ clfName+ " " + obj))
     mean_metric = []
     n_folds = len(np.unique(table[:, 2]))
     n_CV = len(np.unique(table[:, 3]))
@@ -601,7 +601,7 @@ def compare_wrappers(datasets = [], models = [], opt = True, tp = 'roc_auc'):
         #     save_path = plot_path +clfName+'/'+'dataset_comparison_'+ combls + 'pr' +'_noopt.pdf'
 
     else:
-        print("NO SUCH PLOTING OPTION: "+ tp)
+        print(("NO SUCH PLOTING OPTION: "+ tp))
     return fig
 
 
@@ -698,19 +698,19 @@ def plot_sd(mean_sd, datasets, metric, opt):
         metric_list = mean_sd[clfName]
         metric_list = np.array(metric_list).T
         mean_metric = np.mean(metric_list, axis = 0)
-        print("mean_"+metric)
+        print(("mean_"+metric))
         print(mean_metric)
         metric_sterr = np.std(metric_list, axis = 0)/np.sqrt(len(metric_list))
         indices = np.argsort(mean_metric)[::-1]
-        print("indices", indices)
+        print(("indices", indices))
         dfList = []
         for i in range(num_df):
             print(i)
             dfList.append(datasets[indices[i]])
-            print("%d. dataset %s (%.2f)" % (i, datasets[indices[i]], mean_metric[indices[i]]))
+            print(("%d. dataset %s (%.2f)" % (i, datasets[indices[i]], mean_metric[indices[i]])))
         pl.title(metric.upper() + "SD",fontsize=10)
-        pl.errorbar(range(num_df), mean_metric[indices], yerr = metric_sterr[indices], label = clfName)
-    pl.xticks(range(num_df), dfList, size=10,rotation=90)
+        pl.errorbar(list(range(num_df)), mean_metric[indices], yerr = metric_sterr[indices], label = clfName)
+    pl.xticks(list(range(num_df)), dfList, size=10,rotation=90)
     pl.ylabel(metric.upper(),size=10)
     pl.legend(loc='lower right', prop = {'size':7.5})
     pl.yticks(size=10)
@@ -739,13 +739,13 @@ def plot_importances(imp, clfName, obj):
     print("Feature ranking:")
     for f in range(num_features):
         featureList.append(featureNames[indices[f]])
-        print("%d. feature %s (%.2f)" % (f, featureNames[indices[f]], mean_importance[indices[f]]))
+        print(("%d. feature %s (%.2f)" % (f, featureNames[indices[f]], mean_importance[indices[f]])))
     fig = pl.figure(figsize=(8,6),dpi=150)
     pl.title("Feature importances",fontsize=30)
-    pl.bar(range(num_features), mean_importance[indices],
+    pl.bar(list(range(num_features)), mean_importance[indices],
             yerr = std_importance[indices], color=paired[0], align="center",
             edgecolor=paired[0],ecolor=paired[1])
-    pl.xticks(range(num_features), featureList, size=15,rotation=90)
+    pl.xticks(list(range(num_features)), featureList, size=15,rotation=90)
     pl.ylabel("Importance",size=30)
     pl.yticks(size=20)
     pl.xlim([-1, num_features])
@@ -838,12 +838,12 @@ def plotCoeff(X, y, obj, featureNames, whichReg):
     print("Feature ranking:")
     for f in range(num_features):
         featureList.append(featureNames[indices[f]])
-        print("%d. feature %s (%.2f)" % (f, featureNames[indices[f]], coeff[indices[f]]))
+        print(("%d. feature %s (%.2f)" % (f, featureNames[indices[f]], coeff[indices[f]])))
     fig = pl.figure(figsize=(8,6),dpi=150)
     pl.title("Feature importances",fontsize=30)
-    pl.bar(range(num_features), coeff[indices], color=paired[0], align="center",
+    pl.bar(list(range(num_features)), coeff[indices], color=paired[0], align="center",
             edgecolor=paired[0],ecolor=paired[1])
-    pl.xticks(range(num_features), featureList, size=15,rotation=90)
+    pl.xticks(list(range(num_features)), featureList, size=15,rotation=90)
     pl.ylabel("Importance",size=30)
     pl.yticks(size=20)
     pl.xlim([-1, num_features])
@@ -871,11 +871,11 @@ def param_sweeping(clf, obj, X, y, param_dist, metric, param, clfName):
         y_pred, y_true, grids_score, amp = testAlgo(newclf, X, y, clfName, featureNames)
         mean_fpr, mean_tpr, mean_auc = plot_unit_prep(y_pred, y_true, metric)
         scores.append(mean_auc)
-        print("Area under the ROC curve : %f" % mean_auc)
+        print(("Area under the ROC curve : %f" % mean_auc))
     fig = pl.figure(figsize=(8,6),dpi=150)
     paramdist_len = len(param_dist)
-    pl.plot(range(paramdist_len), scores, label = 'Parameter Sweeping Curve')
-    pl.xticks(range(paramdist_len), param_dist, size = 15, rotation = 45)
+    pl.plot(list(range(paramdist_len)), scores, label = 'Parameter Sweeping Curve')
+    pl.xticks(list(range(paramdist_len)), param_dist, size = 15, rotation = 45)
     pl.xlabel(param.upper(),fontsize=30)
     pl.ylabel(metric.upper(),fontsize=30)
     pl.title('Parameter Sweeping Curve',fontsize=25)
@@ -900,7 +900,7 @@ def param_sweep_select(clf):
 def choose_clf(classifiers):
     print ("Which Classifer would you like to use?")
     print ("Options:")
-    clfName = input(str(classifiers.keys())+"\n")
+    clfName = input(str(list(classifiers.keys()))+"\n")
     clf = classifiers[clfName]
     return clf, clfName
 
@@ -911,7 +911,7 @@ def comp_obj_select():
     s= input("Please input in a list format, e.g. [\"Core\", \"Core_Imp\"]")
     datasets = eval(s)
     print("Which following classifiers do you wanna use?")
-    for i in classifiers.keys():
+    for i in list(classifiers.keys()):
         print(i)
     s = input("Please input in a list format, e.g. [\"RandomForest\", \"LogisticRegression\"]")
     models = eval(s)
@@ -931,14 +931,14 @@ def save_output_select():
         for obj in objs:
             # Check whether the ouput data for obj has been generated
             if os.path.exists(general_path + 'data/' + obj):
-                print(obj + "(related output has already been generated)")
+                print((obj + "(related output has already been generated)"))
             else:
                 print(obj)
         cc = input("--->")
         choices = objs if cc == "" else eval(cc)
         for obj in choices:
             if obj not in objs:
-                print (obj + "No such dataset exists. Please type again the list of datasets... \n")
+                print((obj + "No such dataset exists. Please type again the list of datasets... \n"))
                 e = True
     # launch the computations after a last switch:
     cp = "bloup"
@@ -961,7 +961,7 @@ def save_output_select():
         #     n_iter = 5 if n_iter == "" else int(n_iter)
 
         for obj in choices:
-            print ("Saving output for " + obj)
+            print(("Saving output for " + obj))
             target = 'ModEDSS'
             # global featureNames
             X, y, featureNames = pred_prep(h5_path, obj, target)
@@ -971,11 +971,11 @@ def save_output_select():
             except IndexError:
                 X = X.reshape(X.shape[0], 1)
                 num_features = 1
-            random_forest_params["max_features"] = range(2, num_features + 1)
+            random_forest_params["max_features"] = list(range(2, num_features + 1))
             save_output(obj, X, y, featureNames, opt = opt, n_CV=n_CV, scaling = b_scaling, n_iter=n_iter)
 
 def save_output_single(obj):
-    print ("Saving output for " + obj)
+    print(("Saving output for " + obj))
     target = 'ModEDSS'
     # global featureNames
     X, y, featureNames = pred_prep(h5_path, obj, target)
@@ -985,7 +985,7 @@ def save_output_single(obj):
     except IndexError:
         X = X.reshape(X.shape[0], 1)
         num_features = 1
-    random_forest_params["max_features"] = range(2, num_features + 1)
+    random_forest_params["max_features"] = list(range(2, num_features + 1))
     ### Importances/ Coefficient of different params
     plot_gaussian = input("Plot Gaussian2 Fit? (Y/N)")
     if plot_gaussian == "Y":
@@ -1026,7 +1026,7 @@ def save_output_single(obj):
             param, param_dist, metric = param_sweep_select(clf)
             param_sweeping(clf, obj, X, y, param_dist, metric, param, clfName)
         else:
-            print ("Your only choice now is to plot ROC and PR curves for "+clfName+" classifier")
+            print(("Your only choice now is to plot ROC and PR curves for "+clfName+" classifier"))
             # Asking whether to optimize
             opt = input("Optimization? (Y/ N)")
             opt = (opt== "Y" or opt == "y")
@@ -1047,8 +1047,8 @@ def com_clf_select():
             print(obj)
     obj = input('Which dataset would you choose from above list?')
     while obj not in existobjs:
-        obj = input('Which dataset would you choose from above list?')
-    com_clf_opt = input ("With optimization? (Y/N)")
+        obj = eval(input('Which dataset would you choose from above list?'))
+    com_clf_opt = eval(input ("With optimization? (Y/N)"))
     compare_clf(classifiers, obj, metric = 'roc_auc', opt = (com_clf_opt == 'Y'))
 
 
@@ -1064,36 +1064,36 @@ def path_finder():
     plot_path = general_path + 'plots/'
     f = hp.File(h5_path, 'r')
     global objs
-    objs = [str(i) for i in f.keys()]
+    objs = [str(i) for i in list(f.keys())]
     f.close()
 
 
 ######## Global Parameters #######
 
 # Possible Classifiers
-classifiers = {"LogisticRegression": LogisticRegression(),
-                    "KNN": KNeighborsClassifier(),
-                    "BayesBernoulli": BernoulliNB(),
-                    "BayesMultinomial": MultinomialNB(),
-                    "BayesGaussian": GaussianNB(),
-                    "BayesPoisson": PoissonNB(),
-                    "BayesGaussian2":GaussianNB2(),
-                    "SVM": SVC(probability = True),
-                    "RandomForest": RandomForestClassifier(),
-                    "LinearRegression": LinearRegression(),
-                    "BayesMixed": MixNB(),
-                    "BayesMixed2": MixNB2()
-                    }
-# Classifiers actually considered
 # classifiers = {"LogisticRegression": LogisticRegression(),
+#                     "KNN": KNeighborsClassifier(),
 #                     "BayesBernoulli": BernoulliNB(),
+#                     "BayesMultinomial": MultinomialNB(),
 #                     "BayesGaussian": GaussianNB(),
+#                     "BayesPoisson": PoissonNB(),
 #                     "BayesGaussian2":GaussianNB2(),
+#                     "SVM": SVC(probability = True),
 #                     "RandomForest": RandomForestClassifier(),
 #                     "LinearRegression": LinearRegression(),
 #                     "BayesMixed": MixNB(),
 #                     "BayesMixed2": MixNB2()
 #                     }
+# Classifiers actually considered
+classifiers = {"LogisticRegression": LogisticRegression(),
+                    "BayesBernoulli": BernoulliNB(),
+                    "BayesGaussian": GaussianNB(),
+                    "BayesGaussian2":GaussianNB2(),
+                    "RandomForest": RandomForestClassifier(),
+                    "LinearRegression": LinearRegression(),
+                    "BayesMixed": MixNB(),
+                    "BayesMixed2": MixNB2()
+                    }
 # Only for local testing at Rex's machine
 # classifiers = {"LogisticRegression": LogisticRegression(),
 #                 "RandomForest": RandomForestClassifier(),
@@ -1104,7 +1104,7 @@ classifiers = {"LogisticRegression": LogisticRegression(),
 # dictionaries of different classifiers, these can be eyeballed from my parameter sweeping curve
 num_features = 6
 random_forest_params = {"n_estimators": [50,100,200,300],
-              "max_features": range(2, num_features + 1),
+              "max_features": list(range(2, num_features + 1)),
               # "min_samples_split": [2, 3,4,6,8,10],
               # "min_samples_leaf": [5,10,15],
               "bootstrap": [True, False],
@@ -1116,10 +1116,10 @@ logistic_regression_params = {"penalty":['l1','l2'],
                     "intercept_scaling":np.linspace(.1, 1, 11),
                     "tol":[1e-4, 1e-5]}#, 1e-6]}
 # ['n_neighbors', 'weights', 'algorithm', 'leaf_size', 'p', 'metric']
-knn_params= {"n_neighbors":range(1,6),
+knn_params= {"n_neighbors":list(range(1,6)),
                 "algorithm":['auto', 'ball_tree', 'kd_tree'],
-                "leaf_size":range(25,30),
-                "p":range(1,3)}
+                "leaf_size":list(range(25,30)),
+                "p":list(range(1,3))}
 # ['alpha', 'binarize', 'fit_prior', 'class_prior']
 bayesian_bernoulli_params= {"alpha": np.linspace(.1, 1, 11),
                 "binarize": np.linspace(.1, 1, 11)}
