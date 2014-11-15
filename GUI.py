@@ -127,7 +127,7 @@ def getclf():
     newclfNames = clfNames.copy()
     for ds in datasets:
         for clfname in clfNames:
-            if not os.path.exists(data_path + ds +'/' + clfname + '_opt.h5'):
+            if (not os.path.exists(data_path + ds +'/' + clfname + '_opt.h5')) and (clfname in newclfNames):
                 print("remove" + clfname)
                 newclfNames.remove(clfname)
     for i in newclfNames:
