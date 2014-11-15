@@ -101,7 +101,7 @@ def getds():
        l.insert(END, i)
 
 
-ttk.Button(frame, text="get datasets", command=getds).grid(column=0, row=2, sticky=W)
+ttk.Button(frame, text="Get Datasets", command=getds).grid(column=0, row=2, sticky=W)
 
 
 ###### Display Datasets ######
@@ -121,17 +121,16 @@ l2['yscrollcommand'] = s2.set
 def getclf():
     global datasets
     datasets = [objs[i] for i in list(l.curselection())]
-    clfnames = clfNames
     print("datasets: ")
     print(datasets)
+    global newclfNames
+    newclfNames = clfNames.copy()
     for ds in datasets:
-        for clfname in clfnames:
+        for clfname in clfNames:
             if not os.path.exists(data_path + ds +'/' + clfname + '_opt.h5'):
                 print("remove" + clfname)
-                clfnames.remove(clfname)
-    print("clfnames: ")
-    print(clfnames)
-    for i in clfnames:
+                newclfNames.remove(clfname)
+    for i in newclfNames:
        l2.insert(END, i)
 
 
@@ -149,7 +148,7 @@ p = " "
 def plotopt(tp):
     # ouput figure from ms
     global clfs
-    clfs = [clfNames[i] for i in list(l2.curselection())]
+    clfs = [newclfNames[i] for i in list(l2.curselection())]
     print("datasets: ")
     print(datasets)
     print("clfs: ")
