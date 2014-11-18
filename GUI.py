@@ -85,6 +85,7 @@ dsvars = []
 plot_path = " "
 
 def getds():
+    l.delete(0,END)
     value = h5name.get()
     global general_path, h5_path, data_path, plot_path
     general_path = './' + value + '/'
@@ -119,6 +120,7 @@ s2.grid(column=3, row=4, sticky=(N,S))
 l2['yscrollcommand'] = s2.set
 
 def getclf():
+    l2.delete(0,END)
     global datasets
     datasets = [objs[i] for i in list(l.curselection())]
     print("datasets: ")
